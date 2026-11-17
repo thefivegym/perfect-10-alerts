@@ -1,0 +1,22 @@
+{
+  "name": "perfect-10-alerts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "preview": "node --experimental-strip-types scripts/preview-server.ts",
+    "types": "wrangler types",
+    "test": "node --experimental-strip-types --test --test-reporter spec test/*.test.ts",
+    "check": "tsc --noEmit",
+    "vapid": "node scripts/generate-vapid.mjs",
+    "replay": "node --experimental-strip-types scripts/replay-meet.ts",
+    "db:migrate:local": "wrangler d1 migrations apply DB --local",
+    "db:migrate": "wrangler d1 migrations apply DB --remote"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^5.7.2",
+    "wrangler": "^4.164.0"
+  }
+}

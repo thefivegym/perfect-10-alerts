@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>Manage alerts · Perfect 10 Alerts</title>
+<link rel="icon" href="/icons/favicon-32.png">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="wrap">
+<header class="top"><p class="brand"><a href="/">The Five That Score</a></p></header>
+<main>
+<p class="kicker">Your signup</p>
+<h1>Manage alerts</h1>
+<p class="lede" id="summary">Loading…</p>
+<ul class="manage-list" id="details"></ul>
+<div class="stack">
+<button class="btn" type="button" id="push-on">Turn on push for this device</button>
+<button class="btn btn-ghost" type="button" id="email-off">Stop email</button>
+<button class="btn btn-ghost" type="button" id="push-off">Stop push</button>
+<button class="btn btn-ghost" type="button" id="resend">Resend confirmation</button>
+<button class="texty" type="button" id="remove">Remove me completely</button>
+</div>
+<p class="status" id="status" role="status"></p>
+</main>
+</div>
+<script src="/manage.js"></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+# Copy to .dev.vars for `npm run dev`. Never commit .dev.vars.
+# Generate real values with: npm run vapid
+ADMIN_TOKEN=replace-with-npm-run-vapid
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+RESEND_API_KEY=
+TURNSTILE_SECRET=
+EMAIL_WEBHOOK_URL=
+EMAIL_WEBHOOK_TOKEN=

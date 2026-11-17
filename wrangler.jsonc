@@ -1,0 +1,43 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "perfect-10-alerts",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-17",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "head_sampling_rate": 1 },
+    "traces": { "enabled": true, "head_sampling_rate": 0.05 }
+  },
+  // One minute. Meet-day polling stays inside this tick; see src/config.ts.
+  "triggers": {
+    "crons": ["* * * * *"]
+  },
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "perfect-10-alerts",
+      // Replace this after `npx wrangler d1 create perfect-10-alerts`.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  // Non-secret settings. Secrets (VAPID keys, RESEND_API_KEY, ADMIN_TOKEN,
+  // TURNSTILE_SECRET) are set with `wrangler secret put` and are not listed here.
+  "vars": {
+    "PUBLIC_BASE_URL": "",
+    "EMAIL_FROM": "",
+    "EMAIL_PROVIDER": "resend",
+    "VAPID_SUBJECT": "mailto:alerts@example.com",
+    "TURNSTILE_SITE_KEY": "",
+    "SCOREBOARD_DATA_URL": "https://thefivegym.github.io/live-scoreboard/data"
+  }
+  // Custom domain, after the hostname is on this Cloudflare account:
+  // "routes": [{ "pattern": "alerts.example.com", "custom_domain": true }]
+}
