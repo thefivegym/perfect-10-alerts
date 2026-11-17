@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Get a phone push the moment a Division I women's gymnast scores a perfect 10. From The Five That Score.">
 <meta name="theme-color" content="#1c1428">
 <meta property="og:title" content="Perfect 10 Alerts">
@@ -15,46 +15,33 @@
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-<div class="wrap">
-<header class="top">
+<header class="mast">
 <p class="brand">The Five That Score</p>
 <a class="xlink" href="https://x.com/thefivegym">@thefivegym</a>
 </header>
+<main class="wrap">
 <div class="poster">
-<section>
-<p class="kicker">Division I women's gymnastics</p>
-<h1>A 10.0, the moment it happens.</h1>
-<p class="lede">Sign up once. When any NCAA Division I women's gymnast scores a perfect 10 on vault, bars, beam, or floor, your phone gets a push.</p>
-<ul class="facts">
-<li><strong>1</strong><span>alert per gymnast, per event, per meet. No repeats.</span></li>
-<li><strong>10.0</strong><span>exactly. A 9.975 does not buzz your phone.</span></li>
-<li><strong>Off</strong><span>whenever you want. Every notification has an unsubscribe action. No account.</span></li>
-</ul>
+<section class="hero">
+<p class="kicker">Division I</p>
+<h1>A 10.0, right now.</h1>
+<p class="lede">One push when a Division I gymnast scores a 10.0.</p>
 </section>
 <section class="card">
-<h2>Get the alerts</h2>
 <p class="hint" id="setup-hint"></p>
 <form id="signup">
 <p class="honeypot" aria-hidden="true"><label>Company<input name="company" tabindex="-1" autocomplete="off"></label></p>
-<div class="iphone" id="iphone">
-<strong>iPhone.</strong> Push needs iOS 16.4 or newer, and the site has to be on your Home Screen. In Safari tap Share, then Add to Home Screen. Open Perfect 10 Alerts from that icon, then tap Send me the 10s and allow notifications.
-</div>
+<p class="iphone" id="iphone"><strong>iPhone.</strong> iOS 16.4 or newer. In Safari tap Share, then Add to Home Screen. Open the icon, tap Turn on alerts, and allow notifications.</p>
 <div id="turnstile" class="turnstile" hidden></div>
-<button class="btn" type="submit" id="submit">Send me the 10s</button>
+<button class="btn btn-primary" type="submit" id="submit">Turn on alerts</button>
 <p class="status" id="status" role="status"></p>
 </form>
-<div class="privacy">
-<h2>Privacy</h2>
-<p>Your push subscription lives in a private database used only to send these alerts. It is not in the public code, not sold, and not shared. Every notification has an unsubscribe action, and the link after you sign up can remove this device. No login. Scores come from public meet data. This is an unofficial fan project by The Five That Score, not affiliated with the NCAA, Virtius, or Road to Nationals.</p>
-</div>
 </section>
 </div>
-<section class="samples">
-<h2>See one first</h2>
-<p><a href="/sample/push">Sample push alert</a> · <a href="https://thefivegym.github.io/live-scoreboard/">Live scoreboard</a></p>
+<section class="below">
+<p class="privacy">Your push subscription stays in a private database, only for these alerts. It is not sold or shared. Every notification has unsubscribe. <a href="/manage">Manage or remove this device</a> with the private link you get after signup. Unofficial. Not the NCAA, Virtius, or Road to Nationals.</p>
+<p class="samples"><a href="/sample/push">Sample alert</a> · <a href="https://thefivegym.github.io/live-scoreboard/">Live scoreboard</a></p>
 </section>
-<footer class="foot">Graphics on X: @thefivethatscore. Alerts from @thefivegym.</footer>
-</div>
+</main>
 <script src="/app.js"></script>
 </body>
 </html>

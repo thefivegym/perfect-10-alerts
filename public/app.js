@@ -28,7 +28,7 @@
   async function enablePush() {
     if (!config.vapidPublicKey) throw new Error('Push is not configured on this site yet.');
     if (iphone && !standalone) {
-      throw new Error('On iPhone, add this site to your Home Screen first, open it from the icon, then allow notifications.');
+      throw new Error('On iPhone, add this site to your Home Screen first, open it from the icon, then tap Turn on alerts.');
     }
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       throw new Error('This browser cannot receive push notifications.');
