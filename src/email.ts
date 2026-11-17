@@ -139,7 +139,6 @@ function footer(links: MailLinks, why: string): string {
 }
 
 export function renderAlertEmail(alert: AlertDraft, links: MailLinks, opts: { sample?: boolean; clip?: boolean } = {}): { html: string; text: string; subject: string } {
-  const exhibition = alert.exhibition ? 'Exhibition ' : '';
   const subject = opts.clip ? clipSubject(alert) : alertSubject(alert, opts.sample === true);
   const when = formatWhen(alert);
   const meet = alert.meetName || alert.teamsLabel || 'D1 meet';
@@ -160,7 +159,7 @@ export function renderAlertEmail(alert: AlertDraft, links: MailLinks, opts: { sa
   const html = shell(`
 ${banner}
 ${clipNote}
-<p style="margin:0;font-family:'Avenir Next',Futura,sans-serif;font-size:13px;letter-spacing:0.14em;text-transform:uppercase;color:#c2185b;">${esc(exhibition)}${esc(eventLabel(alert.event))}</p>
+<p style="margin:0;font-family:'Avenir Next',Futura,sans-serif;font-size:13px;letter-spacing:0.14em;text-transform:uppercase;color:#c2185b;">${esc(eventLabel(alert.event))}</p>
 <p style="margin:8px 0 0;font-size:42px;line-height:1;">10.0</p>
 <p style="margin:8px 0 0;font-size:28px;line-height:1.2;">${esc(alert.athleteName)}</p>
 <p style="margin:4px 0 0;font-family:'Avenir Next',Futura,sans-serif;font-size:16px;color:#3a3128;">${esc(alert.team)}</p>
@@ -172,7 +171,7 @@ ${footer(links, 'You get this because you asked Perfect 10 Alerts to write when 
   const text = [
     opts.sample ? 'SAMPLE ALERT. This is a test.' : '',
     opts.clip ? 'The clip is up.' : '',
-    `${exhibition}${eventLabel(alert.event)} 10.0`,
+    `${eventLabel(alert.event)} 10.0`,
     alert.athleteName,
     alert.team,
     meet,

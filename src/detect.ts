@@ -9,18 +9,20 @@ import { asObj, decodeEntities, str } from './util.ts';
  * 10.0 (four decimal places, which is how Virtius publishes "10.0000").
  * All-around totals, team event totals, and judge start values are not alerts.
  *
- * Exhibition routines (Virtius lineup order 7 or later, the same rule as the
- * live scoreboard) are included and labeled "Exhibition". The gymnast scored
- * a 10.0; it did not count toward the team total.
+ * Exhibition routines are not alerts. On Virtius, lineup order 7 or later is
+ * an exhibition (the same rule as the live scoreboard). That 10.0 is dropped,
+ * including when the event leaderboard lists it again. Messages never say
+ * "Exhibition".
  *
  * Virtius `type === 0` means the score was the one dropped from a six-person
  * lineup. That flag is not reliable until the rotation is over, so waiting
  * for it would miss the one-to-two minute target. A posted final score of
- * 10.0 alerts immediately. In a normal top-five count, a 10.0 is never the
- * discarded score.
+ * 10.0 in slots 1 through 6 alerts immediately. In a normal top-five count, a
+ * 10.0 is never the discarded score.
  *
- * Road to Nationals does not mark exhibitions. An individual event score of
- * exactly 10.0 is alerted and is not labeled exhibition.
+ * Road to Nationals does not mark exhibitions, so this filter applies to
+ * Virtius lineups. An individual event score of exactly 10.0 on the RTN feed
+ * is still alerted.
  *
  * One alert per athlete + event + meet. The lineup and the event leaderboard
  * can both list the same 10; that is still one alert.
@@ -136,31 +138,33 @@ interface Found {
   exhibition: boolean;
 }
 
-function put(map: Map<string, AlertDraft>, found: Found, meet: MeetContext, fromLineup: boolean): void {
+function put(map: Map<string, AlertDraft>, excluded: Set<string>, found: Found, meet: MeetContext): void {
+  const id = alertId(meet.meetKey, found.event, found.athleteId, found.athleteName);
+  // Lineup order is the exhibition signal. Drop the score, and do not let a
+  // later leaderboard row (which has no order) put it back.
+  if (found.exhibition) {
+    excluded.add(id);
+    map.delete(id);
+    return;
+  }
+  if (excluded.has(id)) return;
   const labels = found.teamLabels.filter(Boolean);
   if (!teamIsD1(labels.length ? labels : [found.team], meet.d1Teams, meet.intrasquad)) return;
-  const id = alertId(meet.meetKey, found.event, found.athleteId, found.athleteName);
-  const draft = finish({
+  if (map.has(id)) return;
+  map.set(id, finish({
     id,
     athleteName: found.athleteName,
     athleteId: found.athleteId,
     team: found.team || 'Unknown',
     event: found.event,
-    exhibition: found.exhibition,
+    exhibition: false,
     meetKey: meet.meetKey,
     meetName: meet.meetName,
     meetDate: meet.meetDate,
     teamsLabel: meet.teamsLabel,
     videoUrl: meet.videoUrl,
     source: meet.source,
-  });
-  const prev = map.get(id);
-  if (!prev) {
-    map.set(id, draft);
-    return;
-  }
-  // The lineup knows the order. A later leaderboard row must not clear "Exhibition".
-  if (fromLineup && prev.exhibition !== draft.exhibition) map.set(id, { ...draft, exhibition: draft.exhibition });
+  }));
 }
 
 export function extractVirtiusTens(json: unknown, meet: MeetContext): AlertDraft[] {
@@ -168,6 +172,7 @@ export function extractVirtiusTens(json: unknown, meet: MeetContext): AlertDraft
   const session = asObj(root?.meet) ?? root;
   if (!session) return [];
   const found = new Map<string, AlertDraft>();
+  const excluded = new Set<string>();
 
   const teams = Array.isArray(session.teams) ? session.teams : [];
   for (const teamRaw of teams) {
@@ -188,14 +193,14 @@ export function extractVirtiusTens(json: unknown, meet: MeetContext): AlertDraft
         if (!g || !isPerfectTen(g.final_score)) continue;
         const name = athleteName(g);
         if (!name) continue;
-        put(found, {
+        put(found, excluded, {
           athleteName: name,
           athleteId: str(g.gymnast_id) || null,
           teamLabels: [short, teamName],
           team: short || teamName || 'Unknown',
           event,
           exhibition: isExhibitionOrder(g.order),
-        }, meet, true);
+        }, meet);
       }
     }
   }
@@ -212,14 +217,14 @@ export function extractVirtiusTens(json: unknown, meet: MeetContext): AlertDraft
       if (!g || !isPerfectTen(g.final_score)) continue;
       const name = athleteName(g);
       if (!name) continue;
-      put(found, {
+      put(found, excluded, {
         athleteName: name,
         athleteId: str(g.gymnast_id) || null,
         teamLabels: [str(g.short_name), str(g.tricode), str(g.team_name)].map(decodeEntities),
         team: decodeEntities(str(g.short_name) || str(g.team_name)) || 'Unknown',
         event,
         exhibition: false,
-      }, meet, false);
+      }, meet);
     }
   }
 
@@ -241,6 +246,7 @@ export function extractRtnTens(json: unknown, meet: MeetContext): AlertDraft[] {
 
 function extractRawRtn(root: Record<string, unknown>, meet: MeetContext): AlertDraft[] {
   const found = new Map<string, AlertDraft>();
+  const excluded = new Set<string>();
   const teamNameById = new Map<string, string>();
   for (const raw of Array.isArray(root.teams) ? root.teams : []) {
     const team = asObj(raw);
@@ -262,14 +268,14 @@ function extractRawRtn(root: Record<string, unknown>, meet: MeetContext): AlertD
         // Gymnast rows use vault/bars/beam/floor. Team totals live on the team
         // object and are ignored here; a team total is never an individual 10.
         if (!isPerfectTen(g[event])) continue;
-        put(found, {
+        put(found, excluded, {
           athleteName: name,
           athleteId,
           teamLabels: [team],
           team: team || 'Unknown',
           event,
           exhibition: false,
-        }, meet, true);
+        }, meet);
       }
     }
   }
@@ -278,6 +284,7 @@ function extractRawRtn(root: Record<string, unknown>, meet: MeetContext): AlertD
 
 function extractNormalizedRtn(root: Record<string, unknown>, meet: MeetContext): AlertDraft[] {
   const found = new Map<string, AlertDraft>();
+  const excluded = new Set<string>();
   for (const raw of Array.isArray(root.teams) ? root.teams : []) {
     const team = asObj(raw);
     if (!team) continue;
@@ -292,14 +299,14 @@ function extractNormalizedRtn(root: Record<string, unknown>, meet: MeetContext):
         if (!g || !isPerfectTen(g.score ?? g.final_score)) continue;
         const name = athleteName(g);
         if (!name) continue;
-        put(found, {
+        put(found, excluded, {
           athleteName: name,
           athleteId: str(g.gymnast_id) || null,
           teamLabels: [teamName],
           team: teamName || 'Unknown',
           event,
           exhibition: false,
-        }, meet, true);
+        }, meet);
       }
     }
   }

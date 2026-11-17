@@ -31,11 +31,11 @@ Scored intrasquads that have a Virtius key (the same lists the scoreboard keeps)
 
 ### Exhibition scores
 
-Virtius lineup slot 7 and later is an exhibition. That is the same rule the scoreboard uses. **Exhibition 10.0s are alerted, and the message says "Exhibition"**, because the gymnast did score a 10.0. The score did not count toward the team total.
+Virtius lineup slot 7 and later is an exhibition. That is the same rule the scoreboard uses. **Those scores are ignored.** A 10.0 in an exhibition routine does not send an alert, even if the same 10 also appears on the event leaderboard. Alerts never say "Exhibition".
 
-Virtius also marks a lineup score as dropped (`type === 0`) once the rotation is over. The alert does not wait for that flag. It is not reliable while the rotation is still going, and waiting would miss the one-to-two minute target. A posted final score of 10.0 is sent as soon as it appears. In a normal top-five count, a 10.0 is never the score that gets thrown out.
+A 10.0 in lineup slots 1 through 6 still alerts. Virtius later marks one score in that group as dropped (`type === 0`). The alert does not wait for that flag. It is not reliable while the rotation is still going, and waiting would miss the one-to-two minute target. In a normal top-five count, a 10.0 is never the score that gets thrown out.
 
-Road to Nationals does not say which routines were exhibitions. An individual event score of exactly 10.0 from that feed is alerted and is not labeled exhibition.
+Road to Nationals does not say which routines were exhibitions, so this filter applies to Virtius lineups. An individual event score of exactly 10.0 from the RTN feed is still alerted.
 
 ## Deploy
 
@@ -251,7 +251,7 @@ npm run replay    # print 10s from a Virtius key (default: the 2026 final)
 | Path | What it is |
 | --- | --- |
 | `src/index.ts` | The Worker: website requests and the every-minute cron |
-| `src/detect.ts` | What counts as a 10.0, including exhibitions |
+| `src/detect.ts` | What counts as a 10.0. Exhibition routines are skipped. |
 | `src/poll.ts` | Schedule refresh, Virtius, and the RTN fallback |
 | `src/email.ts` | Resend, or a JSON webhook if you set `EMAIL_PROVIDER` to `webhook` |
 | `src/push.ts` | Web Push (VAPID + encrypted payload) |

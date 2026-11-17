@@ -108,12 +108,46 @@ test('Virtius extraction: counting, exhibition, dropped, and not the near-misses
     },
   };
   const alerts = extractVirtiusTens(json, meet);
-  const names = alerts.map((alert) => `${alert.athleteName}:${alert.event}:${alert.exhibition ? 'ex' : 'count'}`).sort();
-  assert.deepEqual(names, ['A Starter:vault:count', 'B Exhibition:vault:ex', 'D Dropped Ten:vault:count']);
+  const names = alerts.map((alert) => alert.athleteName).sort();
+  assert.deepEqual(names, ['A Starter', 'D Dropped Ten']);
+  assert.equal(alerts.some((alert) => alert.athleteName === 'B Exhibition'), false);
+  assert.equal(alerts.every((alert) => alert.exhibition === false), true);
   assert.equal(alerts.filter((alert) => alert.athleteName === 'A Starter').length, 1);
   assert.equal(alerts[0].scoreboardUrl.includes('#meet=MEETKEY1'), true);
   assert.equal(alerts[0].videoUrl, 'https://example.com/watch');
   assert.equal(new Set(alerts.map((alert) => alert.id)).size, alerts.length);
+});
+
+test('an exhibition 10 is skipped', () => {
+  const json = {
+    meet: {
+      teams: [{
+        name: 'Oklahoma',
+        short_name: 'Oklahoma',
+        competing: 1,
+        events: [{
+          event_name: 'VAULT',
+          gymnasts: [
+            { gymnast_id: '2', full_name: 'B Exhibition', order: 7, type: 1, final_score: '10.0000' },
+            { gymnast_id: '8', full_name: 'Late Exhibition', order: 9, final_score: '10' },
+            { gymnast_id: '1', full_name: 'A Starter', order: 6, type: 1, final_score: '10.0000' },
+          ],
+        }],
+      }],
+      event_results: [{
+        event_name: 'VAULT',
+        gymnasts: [
+          { gymnast_id: '2', full_name: 'B Exhibition', final_score: '10.0000', short_name: 'Oklahoma' },
+          { gymnast_id: '8', full_name: 'Late Exhibition', final_score: '10.0000', short_name: 'Oklahoma' },
+          { gymnast_id: '1', full_name: 'A Starter', final_score: '10.0000', short_name: 'Oklahoma' },
+        ],
+      }],
+    },
+  };
+  const alerts = extractVirtiusTens(json, meet);
+  assert.deepEqual(alerts.map((alert) => alert.athleteName), ['A Starter']);
+  assert.equal(alerts[0].exhibition, false);
+  assert.equal(alerts.some((alert) => /exhibition/i.test(alert.athleteName)), false);
 });
 
 test('Road to Nationals individual 10s ignore team totals', () => {

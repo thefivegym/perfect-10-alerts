@@ -44,7 +44,6 @@ export function unsubscribePage(kind: 'done' | 'missing' | 'sample'): string {
 
 export function alertPage(alert: AlertDraft, unsubUrl: string): string {
   const copy = notificationCopy(alert);
-  const exhibition = alert.exhibition ? '<p class="flag">Exhibition · did not count toward the team score</p>' : '';
   const links = [
     `<a class="btn" href="${esc(alert.scoreboardUrl)}" rel="noopener noreferrer" referrerpolicy="no-referrer">Open the meet</a>`,
     alert.videoUrl ? `<a class="btn btn-ghost" href="${esc(alert.videoUrl)}" rel="noopener noreferrer" referrerpolicy="no-referrer">Watch the stream</a>` : '',
@@ -53,7 +52,6 @@ export function alertPage(alert: AlertDraft, unsubUrl: string): string {
   ].join('');
   return layout(`${alert.athleteName} · 10.0`, `
 <p class="kicker">${esc(eventLabel(alert.event))}</p>
-${exhibition}
 <p class="score">10.0</p>
 <h1>${esc(alert.athleteName)}</h1>
 <p class="lede">${esc(alert.team)} · ${esc(alert.meetName || alert.teamsLabel)} · ${esc(formatWhen(alert))}</p>

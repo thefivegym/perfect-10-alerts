@@ -27,19 +27,17 @@ export function xSearchUrl(athleteName: string): string {
   return `https://x.com/search?q=${encodeURIComponent(q)}&src=typed_query&f=live`;
 }
 
-export function notificationCopy(alert: Pick<AlertDraft, 'athleteName' | 'team' | 'event' | 'exhibition' | 'meetName' | 'teamsLabel'>, sample = false): { title: string; body: string } {
+export function notificationCopy(alert: Pick<AlertDraft, 'athleteName' | 'team' | 'event' | 'meetName' | 'teamsLabel'>, sample = false): { title: string; body: string } {
   const where = alert.meetName || alert.teamsLabel || 'a D1 meet';
-  const exhibition = alert.exhibition ? 'Exhibition ' : '';
   return {
     title: `${sample ? 'Sample · ' : ''}Perfect 10 · ${alert.athleteName}`,
-    body: `${exhibition}${eventLabel(alert.event)} 10.0 · ${alert.team} · ${where}`,
+    body: `${eventLabel(alert.event)} 10.0 · ${alert.team} · ${where}`,
   };
 }
 
 export function alertSubject(alert: AlertDraft, sample = false): string {
   const prefix = sample ? '[Sample] ' : '';
-  const exhibition = alert.exhibition ? 'exhibition ' : '';
-  return `${prefix}Perfect 10: ${alert.athleteName}, ${exhibition}${eventLabel(alert.event).toLowerCase()} (${alert.team})`;
+  return `${prefix}Perfect 10: ${alert.athleteName}, ${eventLabel(alert.event).toLowerCase()} (${alert.team})`;
 }
 
 export function clipSubject(alert: AlertDraft): string {
