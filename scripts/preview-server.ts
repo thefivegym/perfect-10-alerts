@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
-import { buildClub, clubSeasons, type ClubSource } from '../src/club.ts';
+import { buildClub, clubSeasons, defaultClubSeason, type ClubSource } from '../src/club.ts';
 import type { AlertDraft } from '../src/types.ts';
 import { samplePushPage } from '../src/pages.ts';
 
@@ -24,7 +24,7 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url || '/', origin);
   if (url.pathname === '/api/club') {
     const requested = Number(url.searchParams.get('season'));
-    const season = Number.isInteger(requested) && requested >= 1990 && requested <= 2100 ? requested : 2026;
+    const explicit = Number.isInteger(requested) && requested >= 1990 && requested <= 2100;
     let entries: ClubSource[] = [];
     let sample = true;
     try {
@@ -46,9 +46,11 @@ const server = createServer(async (req, res) => {
         { id: 'sample-1', athlete: 'Jamie Sample', team: 'Sample State', event: 'vault', meet: 'Sample Invitational', date: '2026-02-14', detectedAt: '2026-02-14T20:00:00.000Z', meetUrl: 'https://thefivegym.github.io/live-scoreboard/?date=2026-02-14#meet=sample', clipUrl: null },
       ];
     }
+    const dates = entries.map((entry) => entry.date);
+    const season = explicit ? requested : defaultClubSeason(dates);
     const view = buildClub(entries, season);
     res.writeHead(200, { 'content-type': 'application/json' });
-    res.end(JSON.stringify({ ...view, seasons: clubSeasons(entries.map((entry) => entry.date), season), sample }));
+    res.end(JSON.stringify({ ...view, seasons: clubSeasons(dates, season), sample }));
     return;
   }
   if (url.pathname === '/api/visit') {

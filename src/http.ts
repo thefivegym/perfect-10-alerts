@@ -1,6 +1,6 @@
 import { staticAssetUrl } from './assets.ts';
 import { advanceSeasonBackfill } from './backfill.ts';
-import { buildClub, clubSeasons, clubWriteMode, currentSeason } from './club.ts';
+import { buildClub, clubSeasons, clubWriteMode, defaultClubSeason } from './club.ts';
 import { USER_AGENT, VIRTIUS_SESSION, RTN_ORIGIN } from './config.ts';
 import { allowRate, clearPush, countMeets, findAlert, findAlertByParts, findSubscriberByPush, incrementVisitors, insertAlert, listAlerts, listDeliverableSubscribers, listVisibleClub, meetsOnDates, metaGet, metaSet, saveSubscriber, setClip, updateClubEntry, visitorTotal } from './db.ts';
 import { deliverPending, publicOrigin, wantsPush } from './deliver.ts';
@@ -94,9 +94,11 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
 
   if (path === '/api/club' && request.method === 'GET') {
     const requested = Number(url.searchParams.get('season'));
-    const season = Number.isInteger(requested) && requested >= 1990 && requested <= 2100 ? requested : currentSeason();
+    const explicit = Number.isInteger(requested) && requested >= 1990 && requested <= 2100;
     const visible = await listVisibleClub(env.DB);
-    const seasons = clubSeasons(visible.map((entry) => entry.date), season);
+    const dates = visible.map((entry) => entry.date);
+    const season = explicit ? requested : defaultClubSeason(dates);
+    const seasons = clubSeasons(dates, season);
     return json({ ...buildClub(visible, season), seasons, sample: false });
   }
 

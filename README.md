@@ -44,7 +44,7 @@ Team names are the Road to Nationals names (Stanford, Florida, Oklahoma, LSU, UC
 
 The same log builds the season leaderboard. Athletes are ranked by how many perfect 10s they have. People with the same count share a rank (so two leaders are 1 and 1, and the next person is 3). Within a tie, the gymnast with the more recent 10 is listed first. Each row shows team, count, and VT / UB / BB / FX badges. Anyone with two or more 10s is highlighted. Team totals sit under the board.
 
-`GET /api/club` returns that JSON and nothing about subscribers. `?season=2026` picks a season. With no query it uses the current season (July through the following June, same rule as the schedule). The menu always includes 2026, because that season is seeded, plus any other season that has a visible row.
+`GET /api/club` returns that JSON and nothing about subscribers. `?season=2026` picks that season even if it is empty. With no query, the current season is used only when it already has a visible 10; otherwise the newest season that has entries is shown (2026, while 2027 is still empty). The menu lists both, newest first.
 
 Hide or correct a row (admin token):
 

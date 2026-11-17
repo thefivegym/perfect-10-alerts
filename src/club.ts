@@ -60,6 +60,22 @@ export function currentSeason(now = new Date()): number {
 /** Seasons the public log can show. 2026 is seeded; later seasons come from new rows. */
 export const SEEDED_SEASONS = [2026];
 
+/**
+ * Season shown when the request does not name one.
+ * The current season wins only when it already has a visible 10.
+ * Otherwise the newest season that has entries is used, so an empty 2027
+ * does not hide the 2026 log.
+ */
+export function defaultClubSeason(dates: string[], now = new Date()): number {
+  const current = currentSeason(now);
+  const present = new Set<number>();
+  for (const date of dates) {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) present.add(seasonFor(date));
+  }
+  if (present.has(current)) return current;
+  return [...present].sort((a, b) => b - a)[0] ?? current;
+}
+
 export function clubSeasons(dates: string[], selected: number, now = new Date()): number[] {
   const years = new Set<number>([selected, currentSeason(now), ...SEEDED_SEASONS]);
   for (const date of dates) {

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
-import { buildClub, clubSeasons, clubWriteMode, rankLeaders, shoutout, type ClubSource } from '../src/club.ts';
+import { buildClub, clubSeasons, clubWriteMode, defaultClubSeason, rankLeaders, shoutout, type ClubSource } from '../src/club.ts';
 import { alertBinds, INSERT_ALERT_SQL } from '../src/db.ts';
 import type { AlertDraft } from '../src/types.ts';
 
@@ -15,6 +15,17 @@ function entry(partial: Partial<ClubSource> & Pick<ClubSource, 'id' | 'athlete' 
     ...partial,
   };
 }
+
+test('an empty current season falls back to the newest season that has entries', () => {
+  const now = new Date('2026-11-17T18:00:00.000Z');
+  assert.equal(defaultClubSeason(['2026-04-18', '2025-02-01'], now), 2026);
+  assert.equal(defaultClubSeason(['2026-04-18', '2027-01-08'], now), 2027);
+  assert.equal(defaultClubSeason([], now), 2027);
+  const seasons = clubSeasons(['2026-04-18'], defaultClubSeason(['2026-04-18'], now), now);
+  assert.deepEqual(seasons, [2027, 2026]);
+  assert.equal(seasons[0], 2027);
+  assert.equal(seasons.includes(2026), true);
+});
 
 test('the season menu includes the seeded 2026 log and the current season', () => {
   const seasons = clubSeasons(['2026-04-18'], 2026, new Date('2026-11-17T18:00:00.000Z'));
