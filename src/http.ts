@@ -1,5 +1,6 @@
+import { buildClub, clubWriteMode, currentSeason } from './club.ts';
 import { USER_AGENT, VIRTIUS_SESSION, RTN_ORIGIN } from './config.ts';
-import { allowRate, clearPush, countMeets, findAlert, findAlertByParts, findSubscriberByPush, insertAlert, listAlerts, listDeliverableSubscribers, metaGet, metaSet, saveSubscriber, setClip } from './db.ts';
+import { allowRate, clearPush, countMeets, findAlert, findAlertByParts, findSubscriberByPush, insertAlert, listAlerts, listDeliverableSubscribers, listVisibleClub, meetsOnDates, metaGet, metaSet, saveSubscriber, setClip, updateClubEntry } from './db.ts';
 import { deliverPending, publicOrigin, wantsPush } from './deliver.ts';
 import { bodyMayContainPerfectTen, extractRtnTens, extractVirtiusTens } from './detect.ts';
 import { alertPage, notFoundPage, samplePushPage, unsubscribePage } from './pages.ts';
@@ -7,6 +8,9 @@ import { notificationCopy, SAMPLE_ALERT } from './messages.ts';
 import { pushPayload, sendWebPush } from './push.ts';
 import { findSubscriberByUnsub, parsePush, removeByToken, subscribe } from './subscribe.ts';
 import type { AlertDraft, MeetContext } from './types.ts';
+import type { EventKey } from './types.ts';
+import { addDays } from './time.ts';
+import { seasonFor } from './time.ts';
 import { asObj, html, httpsUrl, json, safeEqual, sha256Hex, str } from './util.ts';
 
 async function rememberOrigin(env: Env, request: Request): Promise<void> {
@@ -85,6 +89,14 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
       countMeets(env.DB),
     ]);
     return json({ ok: true, meets, scheduleRefreshedAt: refreshed, scheduleSource: source });
+  }
+
+  if (path === '/api/club' && request.method === 'GET') {
+    const requested = Number(url.searchParams.get('season'));
+    const season = Number.isInteger(requested) && requested >= 1990 && requested <= 2100 ? requested : currentSeason();
+    const visible = await listVisibleClub(env.DB);
+    const seasons = [...new Set(visible.map((entry) => seasonFor(entry.date)).concat(season))].sort((a, b) => b - a);
+    return json({ ...buildClub(visible, season), seasons, sample: false });
   }
 
   if (path === '/api/config' && request.method === 'GET') {
@@ -247,6 +259,12 @@ async function admin(request: Request, env: Env, path: string): Promise<Response
   if (path === '/api/admin/clip') {
     return attachClip(env, body);
   }
+  if (path === '/api/admin/club') {
+    return correctClub(env, body);
+  }
+  if (path === '/api/admin/club/backfill') {
+    return backfillClub(env, body);
+  }
   return json({ error: 'Not found.' }, 404);
 }
 
@@ -324,12 +342,15 @@ async function replay(env: Env, body: Record<string, unknown>): Promise<Response
   }
 
   let recorded = 0;
-  if (body.record === true) {
+  const write = clubWriteMode(body);
+  if (write !== 'none') {
     const now = new Date();
     for (const alert of alerts) {
-      if (await insertAlert(env.DB, alert, now.toISOString())) recorded++;
+      if (await insertAlert(env.DB, alert, alert.meetDate ? `${alert.meetDate}T12:00:00.000Z` : now.toISOString())) recorded++;
     }
-    await deliverPending(env, alerts.map((alert) => ({ ...alert, detectedAt: now.toISOString() })), now);
+    if (write === 'notify') {
+      await deliverPending(env, alerts.map((alert) => ({ ...alert, detectedAt: now.toISOString() })), now);
+    }
   }
 
   return json({
@@ -348,6 +369,81 @@ async function replay(env: Env, body: Record<string, unknown>): Promise<Response
       search: alert.searchUrl,
     })),
   });
+}
+
+async function correctClub(env: Env, body: Record<string, unknown>): Promise<Response> {
+  const id = str(body.id);
+  if (!id) return json({ error: 'Pass the entry id.' }, 400);
+  const existing = await findAlert(env.DB, id);
+  if (!existing) return json({ error: 'No club entry with that id.' }, 404);
+  const event = str(body.event);
+  if (event && event !== 'vault' && event !== 'bars' && event !== 'beam' && event !== 'floor') {
+    return json({ error: 'Event must be vault, bars, beam, or floor.' }, 400);
+  }
+  const date = str(body.date);
+  if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) return json({ error: 'Date must be YYYY-MM-DD.' }, 400);
+  let clipUrl: string | null | undefined;
+  if ('clip_url' in body) {
+    if (body.clip_url === null || body.clip_url === '') clipUrl = null;
+    else {
+      const clip = httpsUrl(body.clip_url);
+      if (!clip) return json({ error: 'clip_url must be an https link.' }, 400);
+      clipUrl = clip;
+    }
+  }
+  const updated = await updateClubEntry(env.DB, id, {
+    athlete: str(body.athlete) || undefined,
+    team: str(body.team) || undefined,
+    event: (event || undefined) as EventKey | undefined,
+    meet: str(body.meet) || undefined,
+    date: date || undefined,
+    clipUrl,
+    hidden: typeof body.hidden === 'boolean' ? body.hidden : undefined,
+  });
+  return json({ ok: true, id, updated });
+}
+
+async function backfillClub(env: Env, body: Record<string, unknown>): Promise<Response> {
+  const keys: string[] = [];
+  if (str(body.virtius)) keys.push(str(body.virtius));
+  if (Array.isArray(body.keys)) {
+    for (const key of body.keys) if (typeof key === 'string') keys.push(key);
+  }
+  const from = str(body.from) || str(body.date);
+  const to = str(body.to) || from;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(from)) {
+    const dates: string[] = [];
+    let day = from;
+    const end = /^\d{4}-\d{2}-\d{2}$/.test(to) ? to : from;
+    while (day <= end && dates.length < 16) {
+      dates.push(day);
+      day = addDays(day, 1);
+    }
+    const meets = await meetsOnDates(env.DB, dates);
+    for (const meet of meets) if (meet.virtius) keys.push(meet.virtius);
+  }
+  const unique = [...new Set(keys)].filter((key) => /^[A-Za-z0-9_-]{6,64}$/.test(key));
+  if (!unique.length) {
+    return json({ error: 'Pass {"virtius":"KEY"}, {"keys":["KEY"]}, or {"from":"YYYY-MM-DD","to":"YYYY-MM-DD"} for meets already on the schedule.' }, 400);
+  }
+  const batch = unique.slice(0, 8);
+  let logged = 0;
+  for (let i = 0; i < batch.length; i += 6) {
+    const chunk = batch.slice(i, i + 6);
+    const groups = await Promise.all(chunk.map(async (key) => {
+      const res = await fetch(`${VIRTIUS_SESSION}/${encodeURIComponent(key)}/json`, { headers: { Accept: 'application/json', 'User-Agent': USER_AGENT } });
+      if (!res.ok) return [] as AlertDraft[];
+      const parsed = await res.json() as unknown;
+      return extractVirtiusTens(parsed, replayContext(parsed, key));
+    }));
+    for (const alerts of groups) {
+      for (const alert of alerts) {
+        const stamp = /^\d{4}-\d{2}-\d{2}$/.test(alert.meetDate) ? `${alert.meetDate}T12:00:00.000Z` : new Date().toISOString();
+        if (await insertAlert(env.DB, alert, stamp)) logged += 1;
+      }
+    }
+  }
+  return json({ ok: true, logged, checked: batch.length, remaining: unique.length - batch.length });
 }
 
 async function attachClip(env: Env, body: Record<string, unknown>): Promise<Response> {

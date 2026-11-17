@@ -1,5 +1,6 @@
+import type { ClubSource } from './club.ts';
 import { CLAIM_STALE_MS, DELIVERY_ATTEMPTS } from './config.ts';
-import type { AlertDraft, StoredMeet, SubscriberRow } from './types.ts';
+import type { AlertDraft, EventKey, StoredMeet, SubscriberRow } from './types.ts';
 
 export interface DeliveryState {
   status: string;
@@ -185,6 +186,59 @@ export function readAlert(row: AlertSqlRow): AlertDraft {
     source: row.source === 'rtn' ? 'rtn' : 'virtius',
     detectedAt: row.detected_at,
   };
+}
+
+function asEvent(value: string): EventKey {
+  return value === 'bars' || value === 'beam' || value === 'floor' || value === 'vault' ? value : 'vault';
+}
+
+export async function listVisibleClub(db: D1Database): Promise<ClubSource[]> {
+  const result = await db.prepare(
+    `SELECT id, athlete_name, team, event, meet_name, meet_date, detected_at, scoreboard_url, clip_url
+     FROM alerts WHERE hidden = 0 AND exhibition = 0
+     ORDER BY meet_date DESC, detected_at DESC`,
+  ).all<{
+    id: string;
+    athlete_name: string;
+    team: string;
+    event: string;
+    meet_name: string | null;
+    meet_date: string;
+    detected_at: string;
+    scoreboard_url: string;
+    clip_url: string | null;
+  }>();
+  return (result.results || []).map((row) => ({
+    id: row.id,
+    athlete: row.athlete_name,
+    team: row.team,
+    event: asEvent(row.event),
+    meet: row.meet_name || '',
+    date: row.meet_date,
+    detectedAt: row.detected_at,
+    meetUrl: row.scoreboard_url,
+    clipUrl: row.clip_url,
+  }));
+}
+
+export async function updateClubEntry(
+  db: D1Database,
+  id: string,
+  patch: { athlete?: string; team?: string; event?: EventKey; meet?: string; date?: string; clipUrl?: string | null; hidden?: boolean },
+): Promise<boolean> {
+  const sets: string[] = [];
+  const binds: (string | number | null)[] = [];
+  if (patch.athlete !== undefined) { sets.push('athlete_name = ?'); binds.push(patch.athlete); }
+  if (patch.team !== undefined) { sets.push('team = ?'); binds.push(patch.team); }
+  if (patch.event !== undefined) { sets.push('event = ?'); binds.push(patch.event); }
+  if (patch.meet !== undefined) { sets.push('meet_name = ?'); binds.push(patch.meet); }
+  if (patch.date !== undefined) { sets.push('meet_date = ?'); binds.push(patch.date); }
+  if (patch.clipUrl !== undefined) { sets.push('clip_url = ?'); binds.push(patch.clipUrl); }
+  if (patch.hidden !== undefined) { sets.push('hidden = ?'); binds.push(patch.hidden ? 1 : 0); }
+  if (!sets.length) return false;
+  binds.push(id);
+  const result = await db.prepare(`UPDATE alerts SET ${sets.join(', ')} WHERE id = ?`).bind(...binds).run();
+  return (result.meta?.changes ?? 0) > 0;
 }
 
 export async function listRecentAlerts(db: D1Database, sinceIso: string): Promise<AlertDraft[]> {

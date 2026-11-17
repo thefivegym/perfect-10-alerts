@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { clubWriteMode } from '../src/club.ts';
 import { bodyMayContainPerfectTen, extractVirtiusTens } from '../src/detect.ts';
 import type { MeetContext } from '../src/types.ts';
 
@@ -32,5 +33,6 @@ test('replay of the 2026 NCAA Championship final finds Kailin Chio\'s vault 10',
   assert.equal(alerts.every((alert) => ['vault', 'bars', 'beam', 'floor'].includes(alert.event)), true);
   assert.equal(new Set(alerts.map((alert) => alert.id)).size, alerts.length);
   assert.equal(alerts.length, 1);
+  assert.equal(clubWriteMode({}), 'none');
   assert.equal(bodyMayContainPerfectTen(text.replaceAll('10.0000', '9.9875')), false);
 });

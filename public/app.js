@@ -93,4 +93,112 @@
       if (config.pushConfigured !== false) submit.disabled = false;
     }
   });
+
+  const club = document.querySelector('#club');
+  const seasonSelect = document.querySelector('#club-season');
+  const count = document.querySelector('#club-count');
+  const board = document.querySelector('#club-board');
+  const log = document.querySelector('#club-log');
+  const teams = document.querySelector('#club-teams');
+  const sample = document.querySelector('#club-sample');
+  if (!club || !seasonSelect) return;
+
+  function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
+  function badge(label, n, hot) {
+    const el = document.createElement('span');
+    el.className = 'badge' + (n ? '' : ' zero');
+    el.textContent = `${label} ${n}`;
+    if (hot) el.style.borderColor = 'currentColor';
+    return el;
+  }
+
+  function renderClub(data) {
+    sample.hidden = !data.sample;
+    count.textContent = data.count === 1 ? `1 perfect 10 in ${data.season}` : `${data.count} perfect 10s in ${data.season}`;
+    const current = String(data.season);
+    if (![...seasonSelect.options].some((option) => option.value === current)) {
+      clear(seasonSelect);
+      for (const year of data.seasons || [data.season]) {
+        const option = document.createElement('option');
+        option.value = String(year);
+        option.textContent = String(year);
+        seasonSelect.appendChild(option);
+      }
+    }
+    seasonSelect.value = current;
+    clear(board);
+    clear(log);
+    if (!data.leaderboard?.length) {
+      const empty = document.createElement('p');
+      empty.className = 'empty';
+      empty.textContent = 'No perfect 10s logged for this season yet.';
+      board.appendChild(empty);
+    }
+    for (const row of data.leaderboard || []) {
+      const li = document.createElement('li');
+      if (row.hot) li.className = 'hot';
+      const rank = document.createElement('p');
+      rank.className = 'rank';
+      rank.textContent = String(row.rank);
+      const who = document.createElement('p');
+      who.className = 'who';
+      who.append(document.createTextNode(row.athlete));
+      const team = document.createElement('span');
+      team.textContent = `${row.team} · ${row.count}`;
+      who.appendChild(team);
+      const badges = document.createElement('p');
+      badges.className = 'badges';
+      badges.append(
+        badge('VT', row.events.vault),
+        badge('UB', row.events.bars),
+        badge('BB', row.events.beam),
+        badge('FX', row.events.floor),
+      );
+      li.append(rank, who, badges);
+      board.appendChild(li);
+    }
+    for (const entry of data.entries || []) {
+      const li = document.createElement('li');
+      const line = document.createElement('p');
+      line.className = 'shout';
+      line.textContent = entry.shoutout;
+      const meta = document.createElement('p');
+      meta.className = 'meta';
+      meta.textContent = `${entry.meet} · ${entry.date}`;
+      const links = document.createElement('p');
+      links.className = 'links';
+      if (entry.meetUrl) {
+        const meet = document.createElement('a');
+        meet.href = entry.meetUrl;
+        meet.rel = 'noopener noreferrer';
+        meet.referrerPolicy = 'no-referrer';
+        meet.textContent = 'Meet';
+        links.appendChild(meet);
+      }
+      if (entry.clipUrl) {
+        const clip = document.createElement('a');
+        clip.href = entry.clipUrl;
+        clip.rel = 'noopener noreferrer';
+        clip.referrerPolicy = 'no-referrer';
+        clip.textContent = 'Clip';
+        links.appendChild(clip);
+      }
+      li.append(line, meta, links);
+      log.appendChild(li);
+    }
+    teams.textContent = (data.teams || []).map((team) => `${team.team} ${team.count}`).join(' · ');
+  }
+
+  async function loadClub(season) {
+    const query = season ? `?season=${encodeURIComponent(season)}` : '';
+    const res = await fetch(`/api/club${query}`);
+    if (!res.ok) {
+      count.textContent = 'The club log is not available yet.';
+      return;
+    }
+    renderClub(await res.json());
+  }
+
+  seasonSelect.addEventListener('change', () => { loadClub(seasonSelect.value).catch(() => {}); });
+  loadClub('').catch(() => { count.textContent = 'The club log is not available yet.'; });
 })();

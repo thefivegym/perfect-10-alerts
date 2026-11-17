@@ -36,6 +36,42 @@ A 10.0 in lineup slots 1 through 6 still alerts. Virtius later marks one score i
 
 Road to Nationals does not say which routines were exhibitions, so this filter applies to Virtius lineups. An individual event score of exactly 10.0 from the RTN feed is still alerted.
 
+## Perfect 10 Club
+
+Every 10 that would send an alert is also written to a public log: athlete, team, event, meet, and date. The same athlete + event + meet is stored once. Exhibition 10s are not stored. The signup page lists them newest first under the button, with a season count, a shoutout line, the meet link, and a clip link when one has been attached.
+
+The same log builds the season leaderboard. Athletes are ranked by how many perfect 10s they have. People with the same count share a rank (so two leaders are 1 and 1, and the next person is 3). Within a tie, the gymnast with the more recent 10 is listed first. Each row shows team, count, and VT / UB / BB / FX badges. Anyone with two or more 10s is highlighted. Team totals sit under the board.
+
+`GET /api/club` returns that JSON and nothing about subscribers. `?season=2026` picks a season. With no query it uses the current season (July through the following June, same rule as the schedule).
+
+Hide or correct a row (admin token):
+
+```sh
+curl -X POST "$PUBLIC_BASE_URL/api/admin/club" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"id":"MEET|vault|123","hidden":true}'
+```
+
+You can also send `athlete`, `team`, `event`, `meet`, `date`, or `clip_url`.
+
+A normal replay does not write the log. To backfill past meets without notifying anyone:
+
+```sh
+curl -X POST "$PUBLIC_BASE_URL/api/admin/club/backfill" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"virtius":"MFrZ9epozB"}'
+```
+
+`keys` accepts up to eight session keys. `from` and `to` (`YYYY-MM-DD`) use Virtius meets already saved in the schedule. `"log": true` on `/api/admin/replay` does the same for one meet. `"record": true` still saves the 10s and also sends the push.
+
+If this site is already deployed, apply the new table change on top of the existing database:
+
+```sh
+npx wrangler d1 migrations apply DB --remote
+```
+
 ## Deploy
 
 Do these in order. Commands are typed in a terminal, in this project folder. On Windows, PowerShell is fine.
