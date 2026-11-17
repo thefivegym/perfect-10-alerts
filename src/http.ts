@@ -1,3 +1,4 @@
+import { staticAssetUrl } from './assets.ts';
 import { buildClub, clubWriteMode, currentSeason } from './club.ts';
 import { USER_AGENT, VIRTIUS_SESSION, RTN_ORIGIN } from './config.ts';
 import { allowRate, clearPush, countMeets, findAlert, findAlertByParts, findSubscriberByPush, insertAlert, listAlerts, listDeliverableSubscribers, listVisibleClub, meetsOnDates, metaGet, metaSet, saveSubscriber, setClip, updateClubEntry } from './db.ts';
@@ -208,17 +209,21 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
   }
 
   if (request.method === 'GET' || request.method === 'HEAD') {
-    if (path === '/manage') {
-      const assetUrl = new URL(request.url);
-      assetUrl.pathname = '/manage.html';
-      return env.ASSETS.fetch(new Request(assetUrl, request));
+    const assetUrl = staticAssetUrl(url);
+    const assetRequest = assetUrl.href === url.href ? request : new Request(assetUrl, request);
+    const asset = await env.ASSETS.fetch(assetRequest);
+    // A redirect from "/page" to "/page.html" (or the reverse) would loop
+    // through this worker. Those pages are either served above or by the
+    // extensionless asset path.
+    if (asset.status >= 300 && asset.status < 400) {
+      const location = asset.headers.get('Location') || '';
+      try {
+        const next = new URL(location, url).pathname;
+        if (next === path || next === `${path}.html` || `${next}.html` === path) {
+          return html(notFoundPage(), 404);
+        }
+      } catch { /* not a URL we generated; fall through */ }
     }
-    if (path === '/favicon.ico') {
-      const assetUrl = new URL(request.url);
-      assetUrl.pathname = '/icons/favicon-32.png';
-      return env.ASSETS.fetch(new Request(assetUrl, request));
-    }
-    const asset = await env.ASSETS.fetch(request);
     if (asset.status !== 404) return asset;
     return html(notFoundPage(), 404);
   }

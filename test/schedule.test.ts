@@ -6,6 +6,7 @@ import {
   normalizeRtnSchedule,
   parseIntrasquads,
   parsePublishedSchedule,
+  scheduleCoversSeason,
   validSeason,
   virtiusKeyFromLink,
 } from '../src/schedule.ts';
@@ -72,6 +73,22 @@ test('rankings rows with div Div I are the D1 list', () => {
   assert.equal(names?.length, 40);
   assert.equal(names?.includes('Small School'), false);
   assert.equal(d1NamesFromRankings({ data: [{ div: 'Div I', name: 'Only One' }] }), null);
+});
+
+test('a published file that ends in April 2026 does not cover the season that starts in January 2027', () => {
+  const parsed = parsePublishedSchedule({
+    season: 2026,
+    season_published: false,
+    source: 'https://www.roadtonationals.com/api/women/schedule/2026/1',
+    meets: [
+      { id: 1, date: '2024-12-20', virtius: 'oldkey01', home: ['Minnesota'], away: [] },
+      { id: 2, date: '2026-04-18', virtius: 'MFrZ9epozB', home: [], away: ['LSU'] },
+    ],
+  });
+  assert.equal(parsed?.meets.length, 2);
+  assert.equal(scheduleCoversSeason(parsed?.meets || [], 2027), false);
+  assert.equal(scheduleCoversSeason(parsed?.meets || [], 2026), true);
+  assert.equal(scheduleCoversSeason([{ date: '2027-01-08' }], 2027), true);
 });
 
 test('a future season that echoes another year is not valid', () => {

@@ -27,6 +27,7 @@ import {
   overridesFrom,
   parseIntrasquads,
   parsePublishedSchedule,
+  scheduleCoversSeason,
   validSeason,
 } from './schedule.ts';
 import { addDays, seasonFor, ymdInTz } from './time.ts';
@@ -72,7 +73,7 @@ function dataBase(env: Env): string {
   return (env.SCOREBOARD_DATA_URL || 'https://thefivegym.github.io/live-scoreboard/data').replace(/\/$/, '');
 }
 
-async function loadPublished(env: Env): Promise<StoredMeet[] | null> {
+async function loadPublished(env: Env, season: number): Promise<StoredMeet[] | null> {
   const base = dataBase(env);
   const [schedule, hand, discovered] = await Promise.all([
     getJson(`${base}/schedule.json`),
@@ -80,7 +81,18 @@ async function loadPublished(env: Env): Promise<StoredMeet[] | null> {
     getJson(`${base}/intrasquads-discovered.json`),
   ]);
   const parsed = schedule ? parsePublishedSchedule(schedule) : null;
-  if (!parsed) return null;
+  if (!parsed) {
+    log('error', 'published_schedule_unreadable', { url: `${base}/schedule.json` });
+    return null;
+  }
+  // The published file can still be last season (for example dates only
+  // through April 2026) after the new season has started. That is not a
+  // usable schedule; Road to Nationals is the fallback.
+  if (!scheduleCoversSeason(parsed.meets, season)) {
+    const last = parsed.meets.at(-1)?.date ?? null;
+    log('info', 'published_schedule_missing_season', { season, last });
+    return null;
+  }
   return mergeMeets(parsed.meets, parseIntrasquads(hand, discovered));
 }
 
@@ -170,6 +182,7 @@ async function rtnRefreshStep(env: Env, now: Date): Promise<'done' | 'continue' 
   await replaceMeets(env.DB, meets);
   await metaSet(env.DB, 'schedule_refreshed_at', now.toISOString());
   await metaSet(env.DB, 'schedule_source', `${RTN_ORIGIN}/schedule/${job.season}/1`);
+  await metaSet(env.DB, 'schedule_season', String(job.season));
   await metaSet(env.DB, 'rtn_job', '');
   log('info', 'schedule_refreshed', { source: 'rtn', meets: meets.length, season: job.season });
   return 'done';
@@ -179,19 +192,22 @@ async function ensureSchedule(env: Env, now: Date): Promise<PollSummary['schedul
   const refreshed = await metaGet(env.DB, 'schedule_refreshed_at');
   const age = refreshed ? now.getTime() - Date.parse(refreshed) : Infinity;
   const pending = await metaGet(env.DB, 'rtn_job');
-  if (age < SCHEDULE_TTL_MS && !pending) return 'fresh';
+  const season = seasonFor(ymdInTz(now));
+  const cachedSeason = Number(await metaGet(env.DB, 'schedule_season'));
+  if (age < SCHEDULE_TTL_MS && !pending && cachedSeason === season) return 'fresh';
 
   if (!pending) {
-    const published = await loadPublished(env);
+    const published = await loadPublished(env, season);
     if (published) {
       await replaceMeets(env.DB, published);
       await metaSet(env.DB, 'schedule_refreshed_at', now.toISOString());
       await metaSet(env.DB, 'schedule_source', 'published');
+      await metaSet(env.DB, 'schedule_season', String(season));
       await metaSet(env.DB, 'rtn_job', '');
       log('info', 'schedule_refreshed', { source: 'published', meets: published.length });
       return 'refreshed';
     }
-    log('error', 'published_schedule_unreadable', { url: `${dataBase(env)}/schedule.json` });
+    log('info', 'published_schedule_skipped', { season });
   }
   const step = await rtnRefreshStep(env, now);
   return step === 'skipped' ? 'stale' : 'rtn';

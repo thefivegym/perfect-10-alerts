@@ -24,6 +24,15 @@ function splitTeams(value: unknown): string[] {
   return decodeEntities(str(value)).split(',').map((t) => t.trim()).filter(Boolean);
 }
 
+/**
+ * True when at least one scheduled meet falls in `season`.
+ * Season 2027 is July 2026 through June 2027 (the season that starts in January 2027).
+ * A file whose dates stop in April 2026 does not cover it.
+ */
+export function scheduleCoversSeason(meets: { date: string }[], season: number): boolean {
+  return meets.some((meet) => /^\d{4}-\d{2}-\d{2}$/.test(meet.date) && seasonFor(meet.date) === season);
+}
+
 /** The published scoreboard file. Null when the shape is not the one we understand. */
 export function parsePublishedSchedule(json: unknown): { meets: StoredMeet[]; source: string } | null {
   const root = asObj(json);
