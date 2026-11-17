@@ -216,7 +216,7 @@ function sqlText(value: string | null): string {
 
 /** Idempotent INSERT statements. Applying them does not notify anyone. */
 export function clubSeedSql(alerts: AlertDraft[]): string {
-  const header = `-- 2026 Perfect 10 Club. ${alerts.length} perfect 10s from Virtius, with Road to Nationals where a meet had no Virtius session.\n-- Exhibition routines are not included. ON CONFLICT does nothing, and this file sends no pushes.\n`;
+  const header = `-- 2026 Perfect 10 Club. ${alerts.length} perfect 10s. One row per athlete + event + date.\n-- Team names are the Road to Nationals names. Exhibition routines are not included.\n-- Re-applying updates the team name and does not send pushes.\n`;
   if (!alerts.length) return header;
   const sorted = [...alerts].sort((a, b) => a.meetDate.localeCompare(b.meetDate) || a.athleteName.localeCompare(b.athleteName) || a.event.localeCompare(b.event) || a.id.localeCompare(b.id));
   const statements: string[] = [];
@@ -249,7 +249,7 @@ export function clubSeedSql(alerts: AlertDraft[]): string {
   teams_label, video_url, clip_url, scoreboard_url, search_url, source, detected_at, hidden
 ) VALUES
 ${rows.join(',\n')}
-ON CONFLICT(id) DO NOTHING;`);
+ON CONFLICT(id) DO UPDATE SET team = excluded.team;`);
   }
   return `${header}\n${statements.join('\n\n')}\n`;
 }

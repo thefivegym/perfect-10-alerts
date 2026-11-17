@@ -1,5 +1,6 @@
 import type { ClubSource } from './club.ts';
 import { CLAIM_STALE_MS, DELIVERY_ATTEMPTS } from './config.ts';
+import { canonicalTeam } from './teams.ts';
 import type { AlertDraft, EventKey, StoredMeet, SubscriberRow } from './types.ts';
 
 export interface DeliveryState {
@@ -141,9 +142,25 @@ export function alertBinds(alert: AlertDraft, detectedAt: string): (string | num
   ];
 }
 
-/** Returns true when this call stored a new alert. A repeat of the same id stores nothing. */
+/** True when this athlete already has this event on this date, under any meet id. */
+export async function sameDayScore(db: D1Database, alert: Pick<AlertDraft, 'athleteId' | 'athleteName' | 'event' | 'meetDate'>): Promise<boolean> {
+  const row = await db.prepare(
+    `SELECT id FROM alerts
+     WHERE event = ? AND meet_date = ?
+       AND (
+         (? <> '' AND athlete_id = ?)
+         OR athlete_name = ? COLLATE NOCASE
+       )
+     LIMIT 1`,
+  ).bind(alert.event, alert.meetDate, alert.athleteId || '', alert.athleteId || '', alert.athleteName).first<{ id: string }>();
+  return !!row;
+}
+
+/** Returns true when this call stored a new alert. A repeat of the same score stores nothing. */
 export async function insertAlert(db: D1Database, alert: AlertDraft, detectedAt: string): Promise<boolean> {
-  const result = await db.prepare(INSERT_ALERT_SQL).bind(...alertBinds(alert, detectedAt)).run();
+  if (await sameDayScore(db, alert)) return false;
+  const named = { ...alert, team: canonicalTeam({ name: alert.team, short: alert.team }) };
+  const result = await db.prepare(INSERT_ALERT_SQL).bind(...alertBinds(named, detectedAt)).run();
   return (result.meta?.changes ?? 0) > 0;
 }
 

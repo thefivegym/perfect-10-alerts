@@ -40,6 +40,8 @@ Road to Nationals does not say which routines were exhibitions, so this filter a
 
 Every 10 that would send an alert is also written to a public log: athlete, team, event, meet, and date. The same athlete + event + meet is stored once. Exhibition 10s are not stored. The signup page lists them newest first under the button, with a season count, a shoutout line, the meet link, and a clip link when one has been attached.
 
+Team names are the Road to Nationals names (Stanford, Florida, Oklahoma, LSU, UCLA), not Virtius short codes. The same athlete, event, and date is stored once, even when a meet has two session ids.
+
 The same log builds the season leaderboard. Athletes are ranked by how many perfect 10s they have. People with the same count share a rank (so two leaders are 1 and 1, and the next person is 3). Within a tie, the gymnast with the more recent 10 is listed first. Each row shows team, count, and VT / UB / BB / FX badges. Anyone with two or more 10s is highlighted. Team totals sit under the board.
 
 `GET /api/club` returns that JSON and nothing about subscribers. `?season=2026` picks a season. With no query it uses the current season (July through the following June, same rule as the schedule). The menu always includes 2026, because that season is seeded, plus any other season that has a visible row.

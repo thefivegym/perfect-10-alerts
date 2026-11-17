@@ -78,8 +78,8 @@ test('a season backfill logs a Virtius 10, skips the exhibition, and waits befor
     }
     if (url.includes('/meetresults/11')) {
       return Response.json({
-        teams: [{ tid: '1', tname: 'Iowa' }],
-        scores: [[{ fname: 'A', lname: 'Gymnast', gid: '9', team_id: '1', vault: '10.0', bars: '9.8', beam: '9.7', floor: '9.9' }]],
+        teams: [{ tid: '29', tname: 'Iowa' }],
+        scores: [[{ fname: 'A', lname: 'Gymnast', gid: '9', team_id: '29', vault: '10.0', bars: '9.8', beam: '9.7', floor: '9.9' }]],
       });
     }
     return new Response('no', { status: 404 });

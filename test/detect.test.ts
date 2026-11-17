@@ -152,9 +152,9 @@ test('an exhibition 10 is skipped', () => {
 
 test('Road to Nationals individual 10s ignore team totals', () => {
   const raw = {
-    teams: [{ tid: 1, tname: 'Oklahoma', vault: '49.500', bars: '49.100', beam: '49', floor: '49' }],
+    teams: [{ tid: 47, tname: 'Oklahoma', vault: '49.500', bars: '49.100', beam: '49', floor: '49' }],
     scores: [[
-      { team_id: 1, first_name: 'Faith', last_name: 'Torrez', vault: '10.000', bars: '', beam: null, floor: '9.950', all_around: '39.500' },
+      { team_id: 47, first_name: 'Faith', last_name: 'Torrez', vault: '10.000', bars: '', beam: null, floor: '9.950', all_around: '39.500' },
       { team_id: 1, first_name: 'Jordan', last_name: 'Bowers', vault: '9.900', bars: '9.800', beam: '9.800', floor: '9.800' },
     ]],
   };

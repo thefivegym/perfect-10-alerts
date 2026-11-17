@@ -1,4 +1,5 @@
 import { describeMeet, scoreboardUrl, xSearchUrl } from './messages.ts';
+import { canonicalTeam } from './teams.ts';
 import type { AlertDraft, EventKey, MeetContext, StoredMeet } from './types.ts';
 import { asObj, decodeEntities, str } from './util.ts';
 
@@ -181,6 +182,7 @@ export function extractVirtiusTens(json: unknown, meet: MeetContext): AlertDraft
     if (team.competing === 0 || team.competing === '0') continue;
     const teamName = decodeEntities(str(team.name));
     const short = decodeEntities(str(team.short_name) || str(team.tricode));
+    const display = canonicalTeam({ id: str(team.team_id), name: teamName, short });
     const events = Array.isArray(team.events) ? team.events : [];
     for (const evRaw of events) {
       const ev = asObj(evRaw);
@@ -196,8 +198,8 @@ export function extractVirtiusTens(json: unknown, meet: MeetContext): AlertDraft
         put(found, excluded, {
           athleteName: name,
           athleteId: str(g.gymnast_id) || null,
-          teamLabels: [short, teamName],
-          team: short || teamName || 'Unknown',
+          teamLabels: [display, teamName, short],
+          team: display,
           event,
           exhibition: isExhibitionOrder(g.order),
         }, meet);
@@ -221,7 +223,11 @@ export function extractVirtiusTens(json: unknown, meet: MeetContext): AlertDraft
         athleteName: name,
         athleteId: str(g.gymnast_id) || null,
         teamLabels: [str(g.short_name), str(g.tricode), str(g.team_name)].map(decodeEntities),
-        team: decodeEntities(str(g.short_name) || str(g.team_name)) || 'Unknown',
+        team: canonicalTeam({
+          id: str(g.team_id),
+          name: decodeEntities(str(g.team_name)),
+          short: decodeEntities(str(g.short_name) || str(g.tricode)),
+        }),
         event,
         exhibition: false,
       }, meet);
@@ -252,8 +258,8 @@ function extractRawRtn(root: Record<string, unknown>, meet: MeetContext): AlertD
     const team = asObj(raw);
     if (!team) continue;
     const id = str(team.tid) || str(team.team_id);
-    const name = decodeEntities(str(team.tname) || str(team.name));
-    if (id && name) teamNameById.set(id, name);
+    const name = canonicalTeam({ id, name: decodeEntities(str(team.tname) || str(team.name)) });
+    if (id && name && name !== 'Unknown') teamNameById.set(id, name);
   }
   for (const group of Array.isArray(root.scores) ? root.scores : []) {
     if (!Array.isArray(group)) continue;
@@ -262,7 +268,10 @@ function extractRawRtn(root: Record<string, unknown>, meet: MeetContext): AlertD
       if (!g) continue;
       const name = athleteName(g);
       if (!name) continue;
-      const team = decodeEntities(str(g.tname) || teamNameById.get(str(g.team_id)) || '');
+      const team = canonicalTeam({
+        id: str(g.team_id) || str(g.tid),
+        name: decodeEntities(str(g.tname) || teamNameById.get(str(g.team_id)) || ''),
+      });
       const athleteId = str(g.gid) || str(g.gymnast_id) || null;
       for (const event of RTN_EVENTS) {
         // Gymnast rows use vault/bars/beam/floor. Team totals live on the team
@@ -288,7 +297,7 @@ function extractNormalizedRtn(root: Record<string, unknown>, meet: MeetContext):
   for (const raw of Array.isArray(root.teams) ? root.teams : []) {
     const team = asObj(raw);
     if (!team) continue;
-    const teamName = decodeEntities(str(team.name) || str(team.tname));
+    const teamName = canonicalTeam({ id: str(team.tid) || str(team.team_id), name: decodeEntities(str(team.name) || str(team.tname)) });
     for (const evRaw of Array.isArray(team.events) ? team.events : []) {
       const ev = asObj(evRaw);
       if (!ev) continue;

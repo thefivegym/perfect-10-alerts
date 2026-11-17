@@ -1,4 +1,5 @@
 import { eventLabel } from './messages.ts';
+import { canonicalTeam } from './teams.ts';
 import type { EventKey } from './types.ts';
 import { seasonFor, ymdInTz } from './time.ts';
 
@@ -76,6 +77,39 @@ function athleteKey(name: string): string {
   return name.normalize('NFKC').toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
+function sameDayKey(entry: { athlete: string; event: string; date: string }): string {
+  return `${athleteKey(entry.athlete)}|${entry.event}|${entry.date}`;
+}
+
+function isRtnMeet(entry: { id: string; meetUrl?: string }): boolean {
+  return entry.id.startsWith('rtn-') || (entry.meetUrl || '').includes('meet=rtn-');
+}
+
+/**
+ * One score per athlete + event + date. A quad split across Virtius sessions,
+ * or the same meet stored from Virtius and Road to Nationals, counts once.
+ * The Virtius row is the one we keep.
+ */
+export function dedupeSameDay<T extends { id: string; athlete: string; event: string; date: string; meetUrl?: string }>(entries: T[]): T[] {
+  const best = new Map<string, T>();
+  for (const entry of entries) {
+    const key = sameDayKey(entry);
+    const prev = best.get(key);
+    if (!prev) {
+      best.set(key, entry);
+      continue;
+    }
+    const prevRtn = isRtnMeet(prev);
+    const nextRtn = isRtnMeet(entry);
+    if (prevRtn && !nextRtn) best.set(key, entry);
+  }
+  return [...best.values()];
+}
+
+export function namedTeam(team: string): string {
+  return canonicalTeam({ name: team, short: team });
+}
+
 export function rankLeaders(entries: ClubSource[]): LeaderRow[] {
   const grouped = new Map<string, LeaderRow & { latestAt: string }>();
   const chronological = [...entries].sort((a, b) => a.date.localeCompare(b.date) || a.detectedAt.localeCompare(b.detectedAt));
@@ -140,8 +174,8 @@ export function buildClub(entries: ClubSource[], season: number): {
   leaderboard: LeaderRow[];
   teams: TeamRow[];
 } {
-  const seasonEntries = entries
-    .filter((entry) => inSeason(entry.date, season))
+  const seasonEntries = dedupeSameDay(entries.filter((entry) => inSeason(entry.date, season)))
+    .map((entry) => ({ ...entry, team: namedTeam(entry.team) }))
     .sort((a, b) => b.date.localeCompare(a.date) || b.detectedAt.localeCompare(a.detectedAt));
   return {
     season,
