@@ -10,7 +10,7 @@ export function layout(title: string, body: string): string {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="referrer" content="no-referrer">
 <title>${esc(title)}</title>
-<link rel="icon" href="/icons/favicon-32.png">
+<link rel="icon" href="/icons/favicon-32.png?v=2">
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -62,7 +62,7 @@ export function samplePushPage(origin: string): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Sample push · Perfect 10 Alerts</title>
-<link rel="icon" href="/icons/favicon-32.png">
+<link rel="icon" href="/icons/favicon-32.png?v=2">
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body class="lock">
@@ -71,7 +71,7 @@ export function samplePushPage(origin: string): string {
 <p class="phone-date">Saturday, April 18</p>
 <article class="note-card">
 <div class="note-top">
-<img src="/icons/icon-192.png" alt="" width="28" height="28">
+<img src="/icons/icon-192.png?v=2" alt="" width="28" height="28">
 <p>PERFECT 10</p>
 <span>now</span>
 </div>

@@ -5,8 +5,8 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'Perfect 10';
   event.waitUntil(self.registration.showNotification(title, {
     body: data.body || 'A Division I gymnast just scored a 10.0.',
-    icon: '/icons/icon-192.png',
-    badge: '/icons/favicon-32.png',
+    icon: '/icons/icon-192.png?v=2',
+    badge: '/icons/favicon-32.png?v=2',
     data,
     actions: [
       { action: 'open', title: 'Open' },
