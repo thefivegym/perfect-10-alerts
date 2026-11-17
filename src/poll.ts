@@ -45,11 +45,19 @@ export interface PollSummary {
 }
 
 interface RtnJob {
+  /** Season this step is requesting. May be the previous year after a fallback. */
   season: number;
+  /** Season we set out to load. Stays put when the request falls back a year. */
+  attempted: number;
   step: 'week' | 'teams' | 'schedule';
   week?: number;
   triedPrev?: boolean;
   teams?: string[];
+}
+
+function attemptedSeason(job: RtnJob): number {
+  if (job.attempted) return job.attempted;
+  return job.triedPrev ? job.season + 1 : job.season;
 }
 
 async function getText(url: string, headers: Record<string, string>): Promise<{ ok: boolean; status: number; text: string }> {
@@ -118,27 +126,46 @@ async function rtnFetch(env: Env, path: string, now: Date): Promise<unknown | nu
   return getJson(`${RTN_ORIGIN}${path}`);
 }
 
+/** Remember which season we tried, and when, so the next try waits out the normal interval. */
+async function finishRefresh(env: Env, now: Date, job: RtnJob, source?: string): Promise<void> {
+  await metaSet(env.DB, 'schedule_refreshed_at', now.toISOString());
+  await metaSet(env.DB, 'schedule_season', String(attemptedSeason(job)));
+  if (source) await metaSet(env.DB, 'schedule_source', source);
+  await metaSet(env.DB, 'rtn_job', '');
+}
+
+function fallbackJob(job: RtnJob): string {
+  return JSON.stringify({
+    season: job.season - 1,
+    attempted: attemptedSeason(job),
+    step: 'week',
+    triedPrev: true,
+  });
+}
+
 /** One Road to Nationals request, then stop. The next cron minute is past the crawl delay. */
 async function rtnRefreshStep(env: Env, now: Date): Promise<'done' | 'continue' | 'skipped'> {
   if (!(await rtnAllowed(env, now))) return 'skipped';
   const today = ymdInTz(now);
   let job = await readJob(env);
-  if (!job) job = { season: seasonFor(today), step: 'week' };
+  if (!job) {
+    const season = seasonFor(today);
+    job = { season, attempted: season, step: 'week' };
+  }
 
   if (job.step === 'week') {
     const payload = await rtnFetch(env, `/currentweek/${job.season}`, now);
     const week = Number((payload as { max?: unknown } | null)?.max) || 0;
     if (!week) {
       if (!job.triedPrev) {
-        await metaSet(env.DB, 'rtn_job', JSON.stringify({ season: job.season - 1, step: 'week', triedPrev: true }));
+        await metaSet(env.DB, 'rtn_job', fallbackJob(job));
         return 'continue';
       }
-      await metaSet(env.DB, 'schedule_refreshed_at', now.toISOString());
-      await metaSet(env.DB, 'rtn_job', '');
-      log('error', 'rtn_no_rankings', { season: job.season });
+      await finishRefresh(env, now, job);
+      log('error', 'rtn_no_rankings', { season: job.season, attempted: attemptedSeason(job) });
       return 'done';
     }
-    await metaSet(env.DB, 'rtn_job', JSON.stringify({ ...job, step: 'teams', week }));
+    await metaSet(env.DB, 'rtn_job', JSON.stringify({ ...job, attempted: attemptedSeason(job), step: 'teams', week }));
     return 'continue';
   }
 
@@ -147,27 +174,25 @@ async function rtnRefreshStep(env: Env, now: Date): Promise<'done' | 'continue' 
     const names = d1NamesFromRankings(payload);
     if (!names) {
       if (!job.triedPrev) {
-        await metaSet(env.DB, 'rtn_job', JSON.stringify({ season: job.season - 1, step: 'week', triedPrev: true }));
+        await metaSet(env.DB, 'rtn_job', fallbackJob(job));
         return 'continue';
       }
-      await metaSet(env.DB, 'schedule_refreshed_at', now.toISOString());
-      await metaSet(env.DB, 'rtn_job', '');
-      log('error', 'rtn_d1_list_short', { season: job.season });
+      await finishRefresh(env, now, job);
+      log('error', 'rtn_d1_list_short', { season: job.season, attempted: attemptedSeason(job) });
       return 'done';
     }
-    await metaSet(env.DB, 'rtn_job', JSON.stringify({ ...job, step: 'schedule', teams: names }));
+    await metaSet(env.DB, 'rtn_job', JSON.stringify({ ...job, attempted: attemptedSeason(job), step: 'schedule', teams: names }));
     return 'continue';
   }
 
   const payload = await rtnFetch(env, `/schedule/${job.season}/1`, now);
   if (!validSeason(payload, job.season)) {
     if (!job.triedPrev) {
-      await metaSet(env.DB, 'rtn_job', JSON.stringify({ season: job.season - 1, step: 'week', triedPrev: true }));
+      await metaSet(env.DB, 'rtn_job', fallbackJob(job));
       return 'continue';
     }
-    await metaSet(env.DB, 'schedule_refreshed_at', now.toISOString());
-    await metaSet(env.DB, 'rtn_job', '');
-    log('error', 'rtn_schedule_unusable', { season: job.season });
+    await finishRefresh(env, now, job);
+    log('error', 'rtn_schedule_unusable', { season: job.season, attempted: attemptedSeason(job) });
     return 'done';
   }
   const base = dataBase(env);
@@ -180,11 +205,8 @@ async function rtnRefreshStep(env: Env, now: Date): Promise<'done' | 'continue' 
   const schedule = normalizeRtnSchedule(payload, new Set(job.teams || []), overrides.include, overrides.exclude);
   const meets = mergeMeets(schedule, parseIntrasquads(hand, discovered));
   await replaceMeets(env.DB, meets);
-  await metaSet(env.DB, 'schedule_refreshed_at', now.toISOString());
-  await metaSet(env.DB, 'schedule_source', `${RTN_ORIGIN}/schedule/${job.season}/1`);
-  await metaSet(env.DB, 'schedule_season', String(job.season));
-  await metaSet(env.DB, 'rtn_job', '');
-  log('info', 'schedule_refreshed', { source: 'rtn', meets: meets.length, season: job.season });
+  await finishRefresh(env, now, job, `${RTN_ORIGIN}/schedule/${job.season}/1`);
+  log('info', 'schedule_refreshed', { source: 'rtn', meets: meets.length, season: job.season, attempted: attemptedSeason(job) });
   return 'done';
 }
 
@@ -192,9 +214,11 @@ async function ensureSchedule(env: Env, now: Date): Promise<PollSummary['schedul
   const refreshed = await metaGet(env.DB, 'schedule_refreshed_at');
   const age = refreshed ? now.getTime() - Date.parse(refreshed) : Infinity;
   const pending = await metaGet(env.DB, 'rtn_job');
+  // A completed refresh is fresh for the normal interval no matter which season
+  // the data resolved to. Road to Nationals often has only last season in the
+  // fall; that must not start a new request every minute.
+  if (Number.isFinite(age) && age < SCHEDULE_TTL_MS && !pending) return 'fresh';
   const season = seasonFor(ymdInTz(now));
-  const cachedSeason = Number(await metaGet(env.DB, 'schedule_season'));
-  if (age < SCHEDULE_TTL_MS && !pending && cachedSeason === season) return 'fresh';
 
   if (!pending) {
     const published = await loadPublished(env, season);
