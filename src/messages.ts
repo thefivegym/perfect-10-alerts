@@ -35,15 +35,6 @@ export function notificationCopy(alert: Pick<AlertDraft, 'athleteName' | 'team' 
   };
 }
 
-export function alertSubject(alert: AlertDraft, sample = false): string {
-  const prefix = sample ? '[Sample] ' : '';
-  return `${prefix}Perfect 10: ${alert.athleteName}, ${eventLabel(alert.event).toLowerCase()} (${alert.team})`;
-}
-
-export function clipSubject(alert: AlertDraft): string {
-  return `Clip: ${alert.athleteName}'s 10.0 on ${eventLabel(alert.event).toLowerCase()}`;
-}
-
 export function describeMeet(meet: Pick<StoredMeet, 'description' | 'home' | 'away'>): { meetName: string; teamsLabel: string } {
   const label = teamsLabel(meet.home, meet.away);
   return { meetName: meet.description || label, teamsLabel: label };

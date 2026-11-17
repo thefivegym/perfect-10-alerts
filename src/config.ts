@@ -26,8 +26,6 @@ export const CLAIM_STALE_MS = 2 * 60 * 1000;
 /** How long a new 10.0 keeps trying to reach subscribers who were already signed up. */
 export const DELIVER_WINDOW_MS = 12 * 60 * 60 * 1000;
 
-export const CONFIRM_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-
 export const USER_AGENT = 'Perfect10Alerts/1.0 (+https://x.com/thefivegym; D1 perfect-10 alerts)';
 
 export const RTN_ORIGIN = 'https://www.roadtonationals.com/api/women';

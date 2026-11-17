@@ -214,9 +214,9 @@ export async function setClip(db: D1Database, id: string, clipUrl: string): Prom
 }
 
 export async function listDeliverableSubscribers(db: D1Database): Promise<SubscriberRow[]> {
-  const result = await db.prepare(`SELECT * FROM subscribers WHERE
-    (email_status = 'confirmed' AND email IS NOT NULL AND channels IN ('email', 'both'))
-    OR (push_status = 'active' AND push_endpoint IS NOT NULL AND channels IN ('push', 'both'))`).all<SubscriberRow>();
+  const result = await db.prepare(
+    `SELECT * FROM subscribers WHERE push_status = 'active' AND push_endpoint IS NOT NULL`,
+  ).all<SubscriberRow>();
   return result.results || [];
 }
 
@@ -266,11 +266,7 @@ export async function markPushGone(db: D1Database, subscriberId: string, nowIso:
   await db.prepare(`UPDATE subscribers SET push_status = 'unsubscribed', updated_at = ? WHERE id = ?`).bind(nowIso, subscriberId).run();
 }
 
-const SUB_COLS = `id, email, email_status, confirm_token, confirm_expires_at, push_endpoint, push_p256dh, push_auth, push_status, channels, unsub_token, created_at, updated_at`;
-
-export async function findSubscriberByEmail(db: D1Database, email: string): Promise<SubscriberRow | null> {
-  return db.prepare(`SELECT ${SUB_COLS} FROM subscribers WHERE email = ?`).bind(email).first<SubscriberRow>();
-}
+const SUB_COLS = `id, push_endpoint, push_p256dh, push_auth, push_status, unsub_token, created_at, updated_at`;
 
 export async function findSubscriberByPush(db: D1Database, endpoint: string): Promise<SubscriberRow | null> {
   return db.prepare(`SELECT ${SUB_COLS} FROM subscribers WHERE push_endpoint = ?`).bind(endpoint).first<SubscriberRow>();
@@ -280,26 +276,16 @@ export async function findSubscriberByUnsub(db: D1Database, token: string): Prom
   return db.prepare(`SELECT ${SUB_COLS} FROM subscribers WHERE unsub_token = ?`).bind(token).first<SubscriberRow>();
 }
 
-export async function findSubscriberByConfirm(db: D1Database, token: string): Promise<SubscriberRow | null> {
-  return db.prepare(`SELECT ${SUB_COLS} FROM subscribers WHERE confirm_token = ?`).bind(token).first<SubscriberRow>();
-}
-
 export async function saveSubscriber(db: D1Database, row: SubscriberRow): Promise<void> {
-  await db.prepare(`INSERT INTO subscribers (${SUB_COLS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  await db.prepare(`INSERT INTO subscribers (${SUB_COLS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
-      email = excluded.email,
-      email_status = excluded.email_status,
-      confirm_token = excluded.confirm_token,
-      confirm_expires_at = excluded.confirm_expires_at,
       push_endpoint = excluded.push_endpoint,
       push_p256dh = excluded.push_p256dh,
       push_auth = excluded.push_auth,
       push_status = excluded.push_status,
-      channels = excluded.channels,
       unsub_token = excluded.unsub_token,
       updated_at = excluded.updated_at`).bind(
-    row.id, row.email, row.email_status, row.confirm_token, row.confirm_expires_at,
-    row.push_endpoint, row.push_p256dh, row.push_auth, row.push_status, row.channels,
+    row.id, row.push_endpoint, row.push_p256dh, row.push_auth, row.push_status,
     row.unsub_token, row.created_at, row.updated_at,
   ).run();
 }
@@ -308,16 +294,10 @@ export async function clearPush(db: D1Database, id: string, nowIso: string): Pro
   await db.prepare(`UPDATE subscribers SET push_endpoint = NULL, push_p256dh = NULL, push_auth = NULL, push_status = 'unsubscribed', updated_at = ? WHERE id = ?`).bind(nowIso, id).run();
 }
 
-export async function confirmSubscriber(db: D1Database, id: string, nowIso: string): Promise<void> {
-  await db.prepare(`UPDATE subscribers SET email_status = 'confirmed', confirm_token = NULL, confirm_expires_at = NULL, updated_at = ? WHERE id = ?`).bind(nowIso, id).run();
-}
-
 export async function unsubscribeSubscriber(db: D1Database, token: string, nowIso: string): Promise<boolean> {
-  const result = await db.prepare(`UPDATE subscribers SET
-    email_status = CASE WHEN email_status = 'none' THEN 'none' ELSE 'unsubscribed' END,
-    push_status = CASE WHEN push_status = 'none' THEN 'none' ELSE 'unsubscribed' END,
-    updated_at = ?
-    WHERE unsub_token = ?`).bind(nowIso, token).run();
+  const result = await db.prepare(
+    `UPDATE subscribers SET push_status = 'unsubscribed', updated_at = ? WHERE unsub_token = ?`,
+  ).bind(nowIso, token).run();
   return (result.meta?.changes ?? 0) > 0;
 }
 

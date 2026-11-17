@@ -23,19 +23,9 @@ export function layout(title: string, body: string): string {
 </html>`;
 }
 
-export function confirmPage(kind: 'ok' | 'expired' | 'missing', manageUrl?: string): string {
-  const copy = kind === 'ok'
-    ? `<h1>You're confirmed.</h1><p class="lede">When a Division I gymnast scores a 10.0, this inbox gets one email. That's the whole product.</p>`
-    : kind === 'expired'
-      ? `<h1>That link expired.</h1><p class="lede">Go back to the signup page and enter your email again. We'll send a fresh one.</p>`
-      : `<h1>That confirm link isn't valid.</h1><p class="lede">It may already have been used. If you aren't getting alerts, sign up again from the home page.</p>`;
-  const extra = manageUrl ? `<p><a class="btn" href="${esc(manageUrl)}">Manage or remove alerts</a></p>` : `<p><a class="btn" href="/">Back to signup</a></p>`;
-  return layout('Confirm · Perfect 10 Alerts', `${copy}${extra}`);
-}
-
 export function unsubscribePage(kind: 'done' | 'missing' | 'sample'): string {
   const copy = kind === 'done'
-    ? `<h1>You're unsubscribed.</h1><p class="lede">No more perfect-10 emails or push alerts for that signup. You can sign up again any time.</p>`
+    ? `<h1>You're unsubscribed.</h1><p class="lede">No more perfect-10 push alerts for that signup. You can sign up again any time.</p>`
     : kind === 'sample'
       ? `<h1>That's the sample link.</h1><p class="lede">A real alert carries your own unsubscribe link, and one tap removes you. Nothing was changed.</p>`
       : `<h1>That unsubscribe link isn't valid.</h1><p class="lede">If you still get alerts, open a recent message and use the link at the bottom, or write from the address you signed up with.</p>`;
@@ -96,7 +86,7 @@ export function samplePushPage(origin: string): string {
 </div>
 </article>
 <p class="phone-caption">This is the notification the installed app shows. On iPhone it appears after you add the site to your Home Screen (iOS 16.4 or newer). The buttons are the notification actions.</p>
-<p class="phone-caption"><a href="/">Back to signup</a> · <a href="/sample/email">Sample email</a></p>
+<p class="phone-caption"><a href="/">Back to signup</a></p>
 </div>
 </body>
 </html>`;

@@ -5,7 +5,7 @@
   const details = document.querySelector('#details');
   const status = document.querySelector('#status');
   if (!token || token === 'sample') {
-    summary.textContent = 'This page needs the private link from your confirmation email or from the signup screen.';
+    summary.textContent = 'This page needs the private link from the signup screen.';
     document.querySelector('.stack').hidden = true;
     return;
   }
@@ -31,11 +31,10 @@
       summary.textContent = data.error || 'That link is not valid.';
       return null;
     }
-    const email = data.email ? `${data.email} (${data.emailStatus})` : 'No email';
     const push = data.pushStatus === 'active' ? 'On for a saved device' : data.pushStatus;
     summary.textContent = 'This link is the only login. Keep it, or remove yourself below.';
     details.innerHTML = '';
-    for (const [label, value] of [['Email', email], ['Push', push], ['Choice', data.channels]]) {
+    for (const [label, value] of [['Push', push]]) {
       const li = document.createElement('li');
       const name = document.createElement('span');
       name.textContent = label;
@@ -60,9 +59,7 @@
   }
 
   document.querySelector('#remove').addEventListener('click', () => post('remove').catch((err) => say(err.message, true)));
-  document.querySelector('#email-off').addEventListener('click', () => post('email-off').catch((err) => say(err.message, true)));
   document.querySelector('#push-off').addEventListener('click', () => post('push-off').catch((err) => say(err.message, true)));
-  document.querySelector('#resend').addEventListener('click', () => post('resend').catch((err) => say(err.message, true)));
   document.querySelector('#push-on').addEventListener('click', async () => {
     try {
       const configRes = await fetch('/api/config');

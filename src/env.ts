@@ -5,10 +5,7 @@ declare global {
     ADMIN_TOKEN?: string;
     VAPID_PUBLIC_KEY?: string;
     VAPID_PRIVATE_KEY?: string;
-    RESEND_API_KEY?: string;
     TURNSTILE_SECRET?: string;
-    EMAIL_WEBHOOK_URL?: string;
-    EMAIL_WEBHOOK_TOKEN?: string;
   }
 }
 

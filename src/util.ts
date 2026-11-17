@@ -135,9 +135,3 @@ export function html(body: string, status = 200): Response {
     },
   });
 }
-
-export function isEmail(value: string): boolean {
-  if (value.length < 3 || value.length > 254) return false;
-  if (/[\r\n\0]/.test(value)) return false;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}

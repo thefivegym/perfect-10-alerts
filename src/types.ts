@@ -1,5 +1,4 @@
 export type EventKey = 'vault' | 'bars' | 'beam' | 'floor';
-export type ChannelChoice = 'email' | 'push' | 'both';
 export type AlertSource = 'virtius' | 'rtn';
 
 export interface MeetContext {
@@ -51,15 +50,10 @@ export interface StoredMeet {
 
 export interface SubscriberRow {
   id: string;
-  email: string | null;
-  email_status: string;
-  confirm_token: string | null;
-  confirm_expires_at: string | null;
   push_endpoint: string | null;
   push_p256dh: string | null;
   push_auth: string | null;
   push_status: string;
-  channels: string;
   unsub_token: string;
   created_at: string;
   updated_at: string;

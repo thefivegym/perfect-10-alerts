@@ -1,23 +1,16 @@
--- Subscribers. Emails and push subscriptions stay in D1, never in git.
+-- Push subscriptions stay in D1, never in git.
 CREATE TABLE IF NOT EXISTS subscribers (
   id TEXT PRIMARY KEY,
-  email TEXT,
-  email_status TEXT NOT NULL DEFAULT 'none',
-  confirm_token TEXT,
-  confirm_expires_at TEXT,
   push_endpoint TEXT,
   push_p256dh TEXT,
   push_auth TEXT,
-  push_status TEXT NOT NULL DEFAULT 'none',
-  channels TEXT NOT NULL,
+  push_status TEXT NOT NULL DEFAULT 'active',
   unsub_token TEXT NOT NULL UNIQUE,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_subscribers_email ON subscribers(email) WHERE email IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_subscribers_push ON subscribers(push_endpoint) WHERE push_endpoint IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_subscribers_confirm ON subscribers(confirm_token);
 
 -- One row per athlete + event + meet. The primary key is the dedupe key.
 CREATE TABLE IF NOT EXISTS alerts (

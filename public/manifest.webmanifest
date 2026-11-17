@@ -1,7 +1,7 @@
 {
   "name": "Perfect 10 Alerts",
   "short_name": "Perfect 10",
-  "description": "A push or an email when a Division I women's gymnast scores a 10.0. From The Five That Score.",
+  "description": "A phone push when a Division I women's gymnast scores a 10.0. From The Five That Score.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

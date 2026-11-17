@@ -1,8 +1,6 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
-import { renderAlertEmail } from '../src/email.ts';
-import { SAMPLE_ALERT } from '../src/messages.ts';
 import { samplePushPage } from '../src/pages.ts';
 
 const root = join(import.meta.dirname, '..', 'public');
@@ -22,16 +20,7 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url || '/', origin);
   if (url.pathname === '/api/config') {
     res.writeHead(200, { 'content-type': 'application/json' });
-    res.end(JSON.stringify({ pushConfigured: true, emailConfigured: true, vapidPublicKey: '', turnstileSiteKey: '' }));
-    return;
-  }
-  if (url.pathname === '/sample/email') {
-    const rendered = renderAlertEmail(SAMPLE_ALERT, {
-      unsubscribe: `${origin}/unsubscribe?token=sample`,
-      manage: `${origin}/`,
-    }, { sample: true });
-    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-    res.end(rendered.html);
+    res.end(JSON.stringify({ pushConfigured: true, vapidPublicKey: '', turnstileSiteKey: '' }));
     return;
   }
   if (url.pathname === '/sample/push') {

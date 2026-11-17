@@ -1,22 +1,13 @@
 import { USER_AGENT, VIRTIUS_SESSION, RTN_ORIGIN } from './config.ts';
 import { allowRate, clearPush, countMeets, findAlert, findAlertByParts, findSubscriberByPush, insertAlert, listAlerts, listDeliverableSubscribers, metaGet, metaSet, saveSubscriber, setClip } from './db.ts';
-import { deliverPending, publicOrigin } from './deliver.ts';
+import { deliverPending, publicOrigin, wantsPush } from './deliver.ts';
 import { bodyMayContainPerfectTen, extractRtnTens, extractVirtiusTens } from './detect.ts';
-import { createEmailProvider, listUnsubscribeHeaders, renderAlertEmail } from './email.ts';
-import { alertPage, confirmPage, notFoundPage, samplePushPage, unsubscribePage } from './pages.ts';
+import { alertPage, notFoundPage, samplePushPage, unsubscribePage } from './pages.ts';
 import { notificationCopy, SAMPLE_ALERT } from './messages.ts';
 import { pushPayload, sendWebPush } from './push.ts';
-import {
-  findSubscriberByUnsub,
-  parseChannels,
-  parsePush,
-  removeByToken,
-  resendConfirm,
-  subscribe,
-  confirmToken,
-} from './subscribe.ts';
+import { findSubscriberByUnsub, parsePush, removeByToken, subscribe } from './subscribe.ts';
 import type { AlertDraft, MeetContext } from './types.ts';
-import { asObj, html, httpsUrl, isEmail, json, safeEqual, sha256Hex, str } from './util.ts';
+import { asObj, html, httpsUrl, json, safeEqual, sha256Hex, str } from './util.ts';
 
 async function rememberOrigin(env: Env, request: Request): Promise<void> {
   if ((env.PUBLIC_BASE_URL || '').trim()) return;
@@ -97,10 +88,8 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
   }
 
   if (path === '/api/config' && request.method === 'GET') {
-    const email = createEmailProvider(env);
     return json({
       pushConfigured: Boolean(env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY),
-      emailConfigured: Boolean(email),
       vapidPublicKey: env.VAPID_PUBLIC_KEY || '',
       turnstileSiteKey: env.TURNSTILE_SITE_KEY || '',
     });
@@ -110,7 +99,7 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
     let payload: unknown;
     try { payload = await readBody(request); } catch { return json({ error: 'Send a JSON body.' }, 400); }
     const body = asObj(payload) || {};
-    if (str(body.company)) return json({ ok: true, message: 'Check your email to confirm.' });
+    if (str(body.company)) return json({ ok: true, message: 'Push is on for this device.' });
     const ip = clientIp(request);
     const bucket = await sha256Hex(`subscribe|${ip}`);
     if (!(await allowRate(env.DB, bucket, 8, 10 * 60 * 1000, Date.now()))) {
@@ -119,25 +108,14 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
     if (!(await verifyTurnstile(env, str(body.turnstile), ip))) {
       return json({ error: 'The signup check failed. Refresh the page and try again.' }, 400);
     }
-    const channels = parseChannels(body.channels);
-    if (!channels) return json({ error: 'Choose push, email, or both.' }, 400);
-    const result = await subscribe(env, {
-      channels,
-      email: str(body.email) || null,
-      push: parsePush(body.push),
-    }, new Date());
+    const result = await subscribe(env, parsePush(body.push), new Date());
     return json(result.body, result.status);
   }
 
   if (path === '/api/me' && request.method === 'GET') {
     const row = await findSubscriberByUnsub(env.DB, url.searchParams.get('token') || '');
     if (!row) return json({ error: 'That manage link is not valid.' }, 404);
-    return json({
-      email: row.email,
-      emailStatus: row.email_status,
-      pushStatus: row.push_status,
-      channels: row.channels,
-    });
+    return json({ pushStatus: row.push_status });
   }
 
   if (path === '/api/me' && request.method === 'POST') {
@@ -153,16 +131,8 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
       await removeByToken(env, token, now);
       return json({ ok: true, message: 'You are unsubscribed.' });
     }
-    if (action === 'email-off') {
-      row.email_status = row.email_status === 'none' ? 'none' : 'unsubscribed';
-      row.channels = row.push_status === 'active' ? 'push' : row.channels;
-      row.updated_at = now.toISOString();
-      await saveSubscriber(env.DB, row);
-      return json({ ok: true, message: 'Email alerts are off.' });
-    }
     if (action === 'push-off') {
-      row.push_status = row.push_status === 'none' ? 'none' : 'unsubscribed';
-      row.channels = row.email_status === 'confirmed' ? 'email' : row.channels;
+      row.push_status = 'unsubscribed';
       row.updated_at = now.toISOString();
       await saveSubscriber(env.DB, row);
       return json({ ok: true, message: 'Push alerts are off for the saved device.' });
@@ -177,22 +147,11 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
       row.push_p256dh = push.keys.p256dh;
       row.push_auth = push.keys.auth;
       row.push_status = 'active';
-      row.channels = row.email_status === 'confirmed' || row.email_status === 'pending' ? 'both' : 'push';
       row.updated_at = now.toISOString();
       await saveSubscriber(env.DB, row);
       return json({ ok: true, message: 'Push is on for this device.' });
     }
-    if (action === 'resend') {
-      const problem = await resendConfirm(env, row, now);
-      if (problem) return json({ error: problem }, 502);
-      return json({ ok: true, message: row.email_status === 'confirmed' ? 'Email is already confirmed.' : 'Confirmation email sent.' });
-    }
     return json({ error: 'Unknown action.' }, 400);
-  }
-
-  if ((path === '/confirm') && request.method === 'GET') {
-    const kind = await confirmToken(env, url.searchParams.get('token') || '', new Date());
-    return html(confirmPage(kind));
   }
 
   if (path === '/unsubscribe' && (request.method === 'GET' || request.method === 'POST')) {
@@ -224,15 +183,6 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
     const origin = await publicOrigin(env) || new URL(request.url).origin;
     const unsub = `${origin}/unsubscribe?token=${encodeURIComponent(token)}`;
     return html(alertPage(alert, unsub));
-  }
-
-  if (path === '/sample/email' && request.method === 'GET') {
-    const origin = await publicOrigin(env) || new URL(request.url).origin;
-    const rendered = renderAlertEmail(SAMPLE_ALERT, {
-      unsubscribe: `${origin}/unsubscribe?token=sample`,
-      manage: `${origin}/manage?token=sample`,
-    }, { sample: true });
-    return html(rendered.html);
   }
 
   if (path === '/sample/push' && request.method === 'GET') {
@@ -303,41 +253,23 @@ async function admin(request: Request, env: Env, path: string): Promise<Response
 async function sendSample(env: Env, body: Record<string, unknown>): Promise<Response> {
   const origin = await publicOrigin(env);
   if (!origin) return json({ error: 'Set PUBLIC_BASE_URL or open the site once so links in the sample work.' }, 503);
-  const email = str(body.email).toLowerCase();
   const broadcast = body.broadcast === true;
   const push = parsePush(body.push);
-  if (!email && !push && !broadcast) {
-    return json({ error: 'Pass {"email":"you@example.com"} to send a sample to yourself. Add "broadcast": true only if you mean every subscriber.' }, 400);
+  if (!push && !broadcast) {
+    return json({ error: 'Pass {"broadcast": true} after you subscribe on the site, or {"push": {"endpoint","keys"}} for one device.' }, 400);
   }
-  const rendered = renderAlertEmail(SAMPLE_ALERT, {
-    unsubscribe: `${origin}/unsubscribe?token=sample`,
-    manage: `${origin}/`,
-  }, { sample: true });
+  const copy = notificationCopy(SAMPLE_ALERT, true);
   const sent: string[] = [];
-  if (email) {
-    if (!isEmail(email)) return json({ error: 'That email address does not look right.' }, 400);
-    const provider = createEmailProvider(env);
-    if (!provider) return json({ error: 'Email is not configured. Set RESEND_API_KEY and EMAIL_FROM.' }, 503);
-    try {
-      await provider.send({
-        to: email,
-        subject: rendered.subject,
-        html: rendered.html,
-        text: rendered.text,
-        headers: listUnsubscribeHeaders(`${origin}/unsubscribe?token=sample`),
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Email failed';
-      return json({ error: message.slice(0, 400) }, 502);
-    }
-    sent.push('email');
-  }
+  const notify = (endpoint: string, p256dh: string, auth: string, token: string) => sendWebPush(
+    { endpoint, p256dh, auth },
+    pushPayload(copy, {
+      open: `${origin}/a?id=sample&u=${encodeURIComponent(token)}`,
+      unsubscribe: `${origin}/unsubscribe?token=${encodeURIComponent(token)}`,
+    }),
+    env,
+  );
   if (push) {
-    const copy = notificationCopy(SAMPLE_ALERT, true);
-    const result = await sendWebPush({ endpoint: push.endpoint, p256dh: push.keys.p256dh, auth: push.keys.auth }, pushPayload(copy, {
-      open: `${origin}/a?id=sample&u=sample`,
-      unsubscribe: `${origin}/unsubscribe?token=sample`,
-    }), env);
+    const result = await notify(push.endpoint, push.keys.p256dh, push.keys.auth, 'sample');
     if (result !== 'sent') return json({ error: `Push sample was not accepted (${result}).`, sent }, 502);
     sent.push('push');
   }
@@ -345,26 +277,13 @@ async function sendSample(env: Env, body: Record<string, unknown>): Promise<Resp
     const subs = await listDeliverableSubscribers(env.DB);
     let n = 0;
     for (const sub of subs) {
-      if (sub.email && (sub.channels === 'email' || sub.channels === 'both') && sub.email_status === 'confirmed') {
-        const provider = createEmailProvider(env);
-        if (!provider) break;
-        const own = renderAlertEmail(SAMPLE_ALERT, {
-          unsubscribe: `${origin}/unsubscribe?token=${encodeURIComponent(sub.unsub_token)}`,
-          manage: `${origin}/manage?token=${encodeURIComponent(sub.unsub_token)}`,
-        }, { sample: true });
-        await provider.send({
-          to: sub.email,
-          subject: own.subject,
-          html: own.html,
-          text: own.text,
-          headers: listUnsubscribeHeaders(`${origin}/unsubscribe?token=${encodeURIComponent(sub.unsub_token)}`),
-        });
-        n++;
-      }
+      if (!wantsPush(sub) || !sub.push_endpoint || !sub.push_p256dh || !sub.push_auth) continue;
+      const result = await notify(sub.push_endpoint, sub.push_p256dh, sub.push_auth, sub.unsub_token);
+      if (result === 'sent') n++;
     }
     sent.push(`broadcast:${n}`);
   }
-  return json({ ok: true, sent, subject: rendered.subject });
+  return json({ ok: true, sent });
 }
 
 async function replay(env: Env, body: Record<string, unknown>): Promise<Response> {
