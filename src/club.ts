@@ -1,0 +1,207 @@
+import { eventLabel } from './messages.ts';
+import { canonicalTeam } from './teams.ts';
+import type { EventKey } from './types.ts';
+import { seasonFor, ymdInTz } from './time.ts';
+
+export const EVENT_BADGE: Record<EventKey, string> = {
+  vault: 'VT',
+  bars: 'UB',
+  beam: 'BB',
+  floor: 'FX',
+};
+
+export interface ClubSource {
+  id: string;
+  athlete: string;
+  team: string;
+  event: EventKey;
+  meet: string;
+  date: string;
+  detectedAt: string;
+  meetUrl: string;
+  clipUrl: string | null;
+}
+
+export interface ClubEntry extends ClubSource {
+  shoutout: string;
+  badge: string;
+}
+
+export interface LeaderRow {
+  rank: number;
+  athlete: string;
+  team: string;
+  count: number;
+  latest: string;
+  hot: boolean;
+  events: Record<EventKey, number>;
+}
+
+export interface TeamRow {
+  team: string;
+  count: number;
+}
+
+/** Replay and backfill stay off the public log unless the caller asks. */
+export function clubWriteMode(body: { record?: unknown; log?: unknown }): 'none' | 'log' | 'notify' {
+  if (body.record === true) return 'notify';
+  if (body.log === true) return 'log';
+  return 'none';
+}
+
+export function shoutout(athlete: string, event: string, team: string): string {
+  return `Congrats, ${athlete}! Perfect 10 on ${eventLabel(event).toLowerCase()} for ${team}.`;
+}
+
+export function currentSeason(now = new Date()): number {
+  return seasonFor(ymdInTz(now));
+}
+
+/** Seasons the public log can show. 2026 is seeded; later seasons come from new rows. */
+export const SEEDED_SEASONS = [2026];
+
+/**
+ * Season shown when the request does not name one.
+ * The current season wins only when it already has a visible 10.
+ * Otherwise the newest season that has entries is used, so an empty 2027
+ * does not hide the 2026 log.
+ */
+export function defaultClubSeason(dates: string[], now = new Date()): number {
+  const current = currentSeason(now);
+  const present = new Set<number>();
+  for (const date of dates) {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) present.add(seasonFor(date));
+  }
+  if (present.has(current)) return current;
+  return [...present].sort((a, b) => b - a)[0] ?? current;
+}
+
+export function clubSeasons(dates: string[], selected: number, now = new Date()): number[] {
+  const years = new Set<number>([selected, currentSeason(now), ...SEEDED_SEASONS]);
+  for (const date of dates) {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) years.add(seasonFor(date));
+  }
+  return [...years].sort((a, b) => b - a);
+}
+
+/** Season 2026 is 1 Jul 2025 through 30 Jun 2026. */
+export function inSeason(date: string, season: number): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) && seasonFor(date) === season;
+}
+
+function athleteKey(name: string): string {
+  return name.normalize('NFKC').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+function sameDayKey(entry: { athlete: string; event: string; date: string }): string {
+  return `${athleteKey(entry.athlete)}|${entry.event}|${entry.date}`;
+}
+
+function isRtnMeet(entry: { id: string; meetUrl?: string }): boolean {
+  return entry.id.startsWith('rtn-') || (entry.meetUrl || '').includes('meet=rtn-');
+}
+
+/**
+ * One score per athlete + event + date. A quad split across Virtius sessions,
+ * or the same meet stored from Virtius and Road to Nationals, counts once.
+ * The Virtius row is the one we keep.
+ */
+export function dedupeSameDay<T extends { id: string; athlete: string; event: string; date: string; meetUrl?: string }>(entries: T[]): T[] {
+  const best = new Map<string, T>();
+  for (const entry of entries) {
+    const key = sameDayKey(entry);
+    const prev = best.get(key);
+    if (!prev) {
+      best.set(key, entry);
+      continue;
+    }
+    const prevRtn = isRtnMeet(prev);
+    const nextRtn = isRtnMeet(entry);
+    if (prevRtn && !nextRtn) best.set(key, entry);
+  }
+  return [...best.values()];
+}
+
+export function namedTeam(team: string): string {
+  return canonicalTeam({ name: team, short: team });
+}
+
+export function rankLeaders(entries: ClubSource[]): LeaderRow[] {
+  const grouped = new Map<string, LeaderRow & { latestAt: string }>();
+  const chronological = [...entries].sort((a, b) => a.date.localeCompare(b.date) || a.detectedAt.localeCompare(b.detectedAt));
+  for (const entry of chronological) {
+    const key = athleteKey(entry.athlete);
+    let row = grouped.get(key);
+    if (!row) {
+      row = {
+        rank: 0,
+        athlete: entry.athlete,
+        team: entry.team,
+        count: 0,
+        latest: entry.date,
+        latestAt: entry.detectedAt,
+        hot: false,
+        events: { vault: 0, bars: 0, beam: 0, floor: 0 },
+      };
+      grouped.set(key, row);
+    }
+    row.count += 1;
+    row.events[entry.event] += 1;
+    if (entry.date > row.latest || (entry.date === row.latest && entry.detectedAt >= row.latestAt)) {
+      row.latest = entry.date;
+      row.latestAt = entry.detectedAt;
+      row.athlete = entry.athlete;
+      row.team = entry.team;
+    }
+  }
+  const ordered = [...grouped.values()].sort((a, b) =>
+    b.count - a.count || b.latest.localeCompare(a.latest) || b.latestAt.localeCompare(a.latestAt) || a.athlete.localeCompare(b.athlete));
+  let rank = 0;
+  let previousCount = -1;
+  return ordered.map((row, index) => {
+    if (row.count !== previousCount) {
+      rank = index + 1;
+      previousCount = row.count;
+    }
+    return {
+      rank,
+      athlete: row.athlete,
+      team: row.team,
+      count: row.count,
+      latest: row.latest,
+      hot: row.count >= 2,
+      events: row.events,
+    };
+  });
+}
+
+export function teamCounts(entries: ClubSource[]): TeamRow[] {
+  const totals = new Map<string, number>();
+  for (const entry of entries) totals.set(entry.team, (totals.get(entry.team) || 0) + 1);
+  return [...totals.entries()]
+    .map(([team, count]) => ({ team, count }))
+    .sort((a, b) => b.count - a.count || a.team.localeCompare(b.team));
+}
+
+export function buildClub(entries: ClubSource[], season: number): {
+  season: number;
+  count: number;
+  entries: ClubEntry[];
+  leaderboard: LeaderRow[];
+  teams: TeamRow[];
+} {
+  const seasonEntries = dedupeSameDay(entries.filter((entry) => inSeason(entry.date, season)))
+    .map((entry) => ({ ...entry, team: namedTeam(entry.team) }))
+    .sort((a, b) => b.date.localeCompare(a.date) || b.detectedAt.localeCompare(a.detectedAt));
+  return {
+    season,
+    count: seasonEntries.length,
+    entries: seasonEntries.map((entry) => ({
+      ...entry,
+      shoutout: shoutout(entry.athlete, entry.event, entry.team),
+      badge: EVENT_BADGE[entry.event],
+    })),
+    leaderboard: rankLeaders(seasonEntries),
+    teams: teamCounts(seasonEntries),
+  };
+}
