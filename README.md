@@ -178,7 +178,7 @@ If you forget, the Worker remembers the address from the first visit and uses th
 
 ### 8. Send yourself a test alert
 
-On a computer, open the site and allow notifications. On iPhone, follow How to set up on the page: Safari, Share, Add to Home Screen, open the icon, then allow notifications. That saves this device. Then, from the project folder:
+On a computer, open the site and allow notifications. On iPhone, follow How to set up: Safari (not an in-app browser or a Private tab), the ••• menu, Share, Add to Home Screen with Open as Web App on, then open the icon and allow notifications. That saves this device. Then, from the project folder:
 
 ```sh
 curl -X POST "$PUBLIC_BASE_URL/api/admin/test-alert" \
@@ -214,7 +214,7 @@ You should see `"count": 1` and Kailin Chio on vault.
 
 ## Day to day
 
-Fans open the site and allow notifications. On iPhone that only works from the Home Screen icon, in Safari, on iOS 16.4 or newer. How to set up on the signup page walks through Share, Add to Home Screen, and what to do in Chrome or if notifications were blocked. Android and desktop have their own steps.
+Fans open the site and allow notifications. On iPhone that only works from the Home Screen icon, in Safari, on iOS 16.4 or newer. On iOS 26 the Share command is behind the ••• button next to the address bar. How to set up says to open Safari first (not X, Instagram, or Messages), keep Open as Web App on, and what to do if notifications were blocked. Android and desktop have their own steps.
 
 - Every push has an Unsubscribe action. Tapping the notification itself opens a page with the meet, the stream or clip when we have one, an X search for the gymnast's name plus "10", and an unsubscribe button.
 - The manage link shown after signup can turn push off, turn it back on for this device, or remove the signup. There is no password. The link is the login. Don't post it publicly.
@@ -289,7 +289,7 @@ npm run replay    # print 10s from a Virtius key (default: the 2026 final)
 ## Troubleshooting
 
 - **The signup button says push is not turned on.** The VAPID secrets are missing. Run the three `wrangler secret put` commands and deploy again.
-- **Nothing happens on iPhone.** Safari in the browser cannot subscribe. Open How to set up: Share, Add to Home Screen, open the icon, then allow notifications. iOS 16.4 or newer. If the prompt was missed, Settings, Notifications, Perfect 10 Alerts, Allow Notifications. Chrome on iPhone has to be opened in Safari first.
+- **Nothing happens on iPhone.** Safari in the browser cannot subscribe, and a Private tab cannot either. Open How to set up: Safari, •••, Share, Add to Home Screen, Open as Web App, then the icon. iOS 16.4 or newer. Older iOS uses the Share square instead of •••. If the prompt was missed, Settings, Notifications, Perfect 10 Alerts, Allow Notifications. Inside X, Instagram, or Messages, tap Open in Safari first.
 - **Test alert returns 401.** The `Authorization: Bearer` value does not match `ADMIN_TOKEN`.
 - **Replay returns a network error.** Virtius was briefly unreachable. Run it again. `npm test` hits the same URL.
 - **`/manage` keeps redirecting.** The site must be this version: `/manage` is served directly, not by asking the asset host for `/manage.html` (that redirect loops).

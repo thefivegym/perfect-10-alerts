@@ -62,11 +62,11 @@ import { deniedHelp, SETUP_KINDS, setupKind, setupTitle } from './setup.js';
     if (!config.vapidPublicKey) throw new Error('Push is not configured on this site yet.');
     if (kind === 'ios-other') {
       if (setup) setup.open = true;
-      throw new Error('Open this page in Safari, add it to your Home Screen, then turn alerts on from the icon.');
+      throw new Error('Tap Open in Safari first. Then use •••, Share, and Add to Home Screen.');
     }
     if (kind === 'ios-safari') {
       if (setup) setup.open = true;
-      throw new Error('Add this site to your Home Screen, open the icon, then tap Turn on alerts.');
+      throw new Error('In Safari, tap ••• next to the address bar, then Share, then Add to Home Screen. Open the icon and tap Turn on alerts.');
     }
     if (!('serviceWorker' in navigator) || !('PushManager' in window) || typeof Notification === 'undefined') {
       throw new Error('This browser cannot receive push notifications.');

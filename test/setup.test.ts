@@ -35,6 +35,10 @@ test('the signup page keeps the button first and has a guide for each device', (
   const club = html.indexOf('id="club"');
   assert.ok(button > 0 && button < guide && guide < club);
   assert.match(html, /Add to Home Screen/);
+  assert.match(html, /Open as Web App/);
+  assert.match(html, /Open in Safari/);
+  assert.match(html, /•••/);
+  assert.match(html, /iOS 16\.4 or newer/);
   assert.match(html, /id="copy-link"/);
   assert.match(html, /data-setup="android"/);
   assert.match(html, /data-setup="desktop"/);
