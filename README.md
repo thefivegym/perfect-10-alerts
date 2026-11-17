@@ -81,6 +81,8 @@ Call it again until `"done": true`. Each call reads a few Virtius sessions, or o
 
 The 2026 rows are already in `migrations/0003_club_2026.sql`. Applying migrations loads that season into the club. You do not need to crawl it again unless you pass `"reset": true`.
 
+`migrations/0004_visitors.sql` adds a single visitor total. The signup page shows it. Each browser is counted once, in that browser, and the database stores only the number.
+
 If this site is already deployed, apply the new table change on top of the existing database:
 
 ```sh
@@ -214,7 +216,7 @@ You should see `"count": 1` and Kailin Chio on vault.
 
 ## Day to day
 
-Fans open the site and allow notifications. On iPhone that only works from the Home Screen icon, in Safari, on iOS 16.4 or newer. On iOS 26 the Share command is behind the ••• button next to the address bar. How to set up says to open Safari first (not X, Instagram, or Messages), keep Open as Web App on, and what to do if notifications were blocked. Android and desktop have their own steps.
+Fans open the site and allow notifications. How to set up has iPhone, Android, and Computer tabs and opens the one that matches the device. On iPhone that only works from the Home Screen icon, in Safari, on iOS 16.4 or newer. On iOS 26 the Share command is behind the ••• button next to the address bar. Android uses Chrome: Turn on alerts, then Allow, with an optional Add to Home screen. A computer uses Chrome, Edge, Firefox, or Safari on a Mac the same way.
 
 - Every push has an Unsubscribe action. Tapping the notification itself opens a page with the meet, the stream or clip when we have one, an X search for the gymnast's name plus "10", and an unsubscribe button.
 - The manage link shown after signup can turn push off, turn it back on for this device, or remove the signup. There is no password. The link is the login. Don't post it publicly.

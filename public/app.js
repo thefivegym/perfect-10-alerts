@@ -1,4 +1,4 @@
-import { deniedHelp, SETUP_KINDS, setupKind, setupTitle } from './setup.js';
+import { deniedHelp, SETUP_KINDS, setupKind, setupTab } from './setup.js';
 
 (() => {
   const form = document.querySelector('#signup');
@@ -33,10 +33,29 @@ import { deniedHelp, SETUP_KINDS, setupKind, setupTitle } from './setup.js';
   const setup = document.querySelector('#setup');
   const denied = document.querySelector('#denied');
   const title = document.querySelector('#setup-title');
-  if (title) title.textContent = setupTitle(kind);
-  for (const guide of document.querySelectorAll('.guide')) {
-    guide.hidden = guide.dataset.setup !== kind;
+  if (title) title.textContent = 'How to set up';
+  const tab = setupTab(kind);
+
+  function showTab(name) {
+    for (const button of document.querySelectorAll('.setup-tab')) {
+      const on = button.dataset.tab === name;
+      button.setAttribute('aria-selected', on ? 'true' : 'false');
+    }
+    const iphoneKind = kind.startsWith('ios') ? kind : 'ios-safari';
+    for (const guide of document.querySelectorAll('.guide')) {
+      if (guide.dataset.tab !== name) {
+        guide.hidden = true;
+        continue;
+      }
+      guide.hidden = name === 'iphone' && guide.dataset.setup !== iphoneKind;
+    }
   }
+  showTab(tab);
+  document.querySelector('.setup-tabs')?.addEventListener('click', (event) => {
+    const button = event.target.closest('.setup-tab');
+    if (!button) return;
+    showTab(button.dataset.tab);
+  });
   if (forced && setup) setup.open = true;
 
   function showDenied() {
@@ -46,6 +65,22 @@ import { deniedHelp, SETUP_KINDS, setupKind, setupTitle } from './setup.js';
     if (setup) setup.open = true;
   }
   if (typeof Notification !== 'undefined' && Notification.permission === 'denied') showDenied();
+
+  const visitors = document.querySelector('#visitors');
+  if (visitors) {
+    let counted = false;
+    try { counted = localStorage.getItem('p10-counted') === '1'; } catch { counted = false; }
+    fetch('/api/visit', { method: counted ? 'GET' : 'POST' }).then(async (res) => {
+      if (!res.ok) return;
+      const data = await res.json();
+      const total = Number(data.total);
+      if (!Number.isFinite(total)) return;
+      if (!counted) {
+        try { localStorage.setItem('p10-counted', '1'); } catch { /* private mode still shows the total */ }
+      }
+      visitors.textContent = `Visitors: ${total.toLocaleString('en-US')}`;
+    }).catch(() => {});
+  }
 
   document.querySelector('#copy-link')?.addEventListener('click', async () => {
     const button = document.querySelector('#copy-link');

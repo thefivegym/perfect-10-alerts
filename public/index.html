@@ -37,7 +37,12 @@
 <p class="denied" id="denied" hidden></p>
 <details class="setup" id="setup">
 <summary id="setup-title">How to set up</summary>
-<div class="guide" data-setup="ios-safari">
+<div class="setup-tabs" role="tablist" aria-label="Device">
+<button class="setup-tab" type="button" role="tab" data-tab="iphone" aria-selected="true">iPhone</button>
+<button class="setup-tab" type="button" role="tab" data-tab="android" aria-selected="false">Android</button>
+<button class="setup-tab" type="button" role="tab" data-tab="computer" aria-selected="false">Computer</button>
+</div>
+<div class="guide" data-tab="iphone" data-setup="ios-safari">
 <p class="guide-note">iOS 16.4 or newer. Safari only, and not a Private tab.</p>
 <ol>
 <li>Open this page in <strong>Safari</strong>. In X, Instagram, or Messages, tap <strong>Open in Safari</strong> first.</li>
@@ -47,7 +52,7 @@
 <li>Open the Home Screen icon, tap <strong>Turn on alerts</strong>, then <strong>Allow</strong>. Missed it? Settings, Notifications, Perfect 10 Alerts.</li>
 </ol>
 </div>
-<div class="guide" data-setup="ios-home" hidden>
+<div class="guide" data-tab="iphone" data-setup="ios-home" hidden>
 <p class="guide-note">You opened this from the Home Screen icon. That is the right place. iOS 16.4 or newer.</p>
 <ol>
 <li>Tap <strong>Turn on alerts</strong>.</li>
@@ -55,7 +60,7 @@
 </ol>
 <p class="guide-note">Missed Allow? Stay in this icon, then open Settings, Notifications, Perfect 10 Alerts, and turn Allow Notifications on. Come back and tap Turn on alerts again.</p>
 </div>
-<div class="guide" data-setup="ios-other" hidden>
+<div class="guide" data-tab="iphone" data-setup="ios-other" hidden>
 <p class="guide-note">This is not Safari. iPhone alerts need the Home Screen icon, on iOS 16.4 or newer, and not a Private tab.</p>
 <ol>
 <li>Tap <strong>Open in Safari</strong>. If you only see this page inside X, Instagram, or Messages, use that button. Or tap <strong>Copy link</strong> and paste it into Safari.</li>
@@ -66,20 +71,22 @@
 </ol>
 <button class="btn btn-ghost" type="button" id="copy-link">Copy link</button>
 </div>
-<div class="guide" data-setup="android" hidden>
+<div class="guide" data-tab="android" hidden>
+<p class="guide-note">Chrome. Not an in-app browser.</p>
 <ol>
-<li>Tap <strong>Turn on alerts</strong>.</li>
-<li>Tap <strong>Allow</strong>.</li>
+<li>Open this page in <strong>Chrome</strong>. In another app, use the menu and tap <strong>Open in Chrome</strong>.</li>
+<li>Tap <strong>Turn on alerts</strong>, then <strong>Allow</strong>.</li>
+<li>Optional: tap the <span class="share-pill dots">⋮</span> menu, then <strong>Add to Home screen</strong> or <strong>Install app</strong>.</li>
 </ol>
-<p class="guide-note">Optional: open the Chrome menu and tap Add to Home screen, then open that icon.</p>
-<p class="guide-note">Blocked them? Tap the lock icon in the address bar, then Permissions, then Notifications, and choose Allow. You can also use Chrome Settings, Site settings, Notifications. Then tap Turn on alerts again.</p>
+<p class="guide-note">Blocked earlier? Tap the site settings icon in the address bar, then Permissions, then Notifications, and set Allow. Also turn Chrome notifications on in Android Settings. Samsung Internet: menu, Add page to, Home screen.</p>
 </div>
-<div class="guide" data-setup="desktop" hidden>
+<div class="guide" data-tab="computer" data-setup="desktop" hidden>
+<p class="guide-note">Chrome, Edge, Firefox, or Safari on a Mac.</p>
 <ol>
-<li>Tap <strong>Turn on alerts</strong>.</li>
-<li>Click <strong>Allow</strong> on the browser prompt.</li>
+<li>Click <strong>Turn on alerts</strong>.</li>
+<li>Click <strong>Allow</strong>.</li>
 </ol>
-<p class="guide-note">Blocked them? Click the lock icon in the address bar, set Notifications to Allow, then tap Turn on alerts again.</p>
+<p class="guide-note">Blocked earlier? Click the lock icon in the address bar, set Notifications to Allow, then click Turn on alerts again.</p>
 </div>
 </details>
 </section>
@@ -112,6 +119,7 @@
 <p class="privacy">Your push subscription stays in a private database, only for these alerts. It is not sold or shared. Every notification has unsubscribe. <a href="/manage">Manage or remove this device</a> with the private link you get after signup. Unofficial. Not the NCAA, Virtius, or Road to Nationals.</p>
 <p class="samples"><a href="/sample/push">Sample alert</a> · <a href="https://thefivegym.github.io/live-scoreboard/">Live scoreboard</a></p>
 </section>
+<footer class="site-foot"><p id="visitors">Visitors</p></footer>
 </main>
 <script type="module" src="/app.js"></script>
 </body>

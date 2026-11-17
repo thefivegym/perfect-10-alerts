@@ -2,7 +2,7 @@ import { staticAssetUrl } from './assets.ts';
 import { advanceSeasonBackfill } from './backfill.ts';
 import { buildClub, clubSeasons, clubWriteMode, currentSeason } from './club.ts';
 import { USER_AGENT, VIRTIUS_SESSION, RTN_ORIGIN } from './config.ts';
-import { allowRate, clearPush, countMeets, findAlert, findAlertByParts, findSubscriberByPush, insertAlert, listAlerts, listDeliverableSubscribers, listVisibleClub, meetsOnDates, metaGet, metaSet, saveSubscriber, setClip, updateClubEntry } from './db.ts';
+import { allowRate, clearPush, countMeets, findAlert, findAlertByParts, findSubscriberByPush, incrementVisitors, insertAlert, listAlerts, listDeliverableSubscribers, listVisibleClub, meetsOnDates, metaGet, metaSet, saveSubscriber, setClip, updateClubEntry, visitorTotal } from './db.ts';
 import { deliverPending, publicOrigin, wantsPush } from './deliver.ts';
 import { bodyMayContainPerfectTen, extractRtnTens, extractVirtiusTens } from './detect.ts';
 import { alertPage, notFoundPage, samplePushPage, unsubscribePage } from './pages.ts';
@@ -98,6 +98,13 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
     const visible = await listVisibleClub(env.DB);
     const seasons = clubSeasons(visible.map((entry) => entry.date), season);
     return json({ ...buildClub(visible, season), seasons, sample: false });
+  }
+
+  if (path === '/api/visit' && request.method === 'GET') {
+    return json({ total: await visitorTotal(env.DB) });
+  }
+  if (path === '/api/visit' && request.method === 'POST') {
+    return json({ total: await incrementVisitors(env.DB) });
   }
 
   if (path === '/api/config' && request.method === 'GET') {

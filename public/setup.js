@@ -11,6 +11,13 @@ export function setupKind(input) {
   return 'desktop';
 }
 
+/** Which How to set up tab to open first. */
+export function setupTab(kind) {
+  if (kind === 'android') return 'android';
+  if (kind === 'desktop') return 'computer';
+  return 'iphone';
+}
+
 export function setupTitle(kind) {
   if (kind === 'ios-safari' || kind === 'ios-home') return 'How to set up on iPhone or iPad';
   if (kind === 'ios-other') return 'Open in Safari first';
@@ -26,7 +33,7 @@ export function deniedHelp(kind) {
     return 'iPhone only allows these alerts from the Safari Home Screen icon. Copy the link, open it in Safari, and add it to your Home Screen.';
   }
   if (kind === 'android') {
-    return 'Notifications are blocked. In Chrome tap the lock icon, then Permissions, then Notifications, and choose Allow. Then tap Turn on alerts again.';
+    return 'Notifications are blocked. Tap the site settings icon in the address bar, then Permissions, then Notifications, and set it to Allow. Also turn Chrome notifications on in Android Settings.';
   }
   return 'Notifications are blocked. Click the lock icon in the address bar, set Notifications to Allow, then tap Turn on alerts again.';
 }

@@ -18,6 +18,8 @@ const types: Record<string, string> = {
   '.txt': 'text/plain; charset=utf-8',
 };
 
+let previewVisits = 1234;
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url || '/', origin);
   if (url.pathname === '/api/club') {
@@ -47,6 +49,12 @@ const server = createServer(async (req, res) => {
     const view = buildClub(entries, season);
     res.writeHead(200, { 'content-type': 'application/json' });
     res.end(JSON.stringify({ ...view, seasons: clubSeasons(entries.map((entry) => entry.date), season), sample }));
+    return;
+  }
+  if (url.pathname === '/api/visit') {
+    if (req.method === 'POST') previewVisits += 1;
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ total: previewVisits }));
     return;
   }
   if (url.pathname === '/api/config') {

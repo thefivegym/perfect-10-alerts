@@ -18,6 +18,19 @@ export function deliveryDecision(existing: DeliveryState | null, nowMs: number):
   return 'send';
 }
 
+export async function visitorTotal(db: D1Database): Promise<number> {
+  const row = await db.prepare('SELECT total FROM visitor_counter WHERE id = 1').first<{ total: number }>();
+  return row?.total ?? 0;
+}
+
+/** Adds one visit. Stores only the running total, never an address or a browser id. */
+export async function incrementVisitors(db: D1Database): Promise<number> {
+  const row = await db.prepare(
+    'UPDATE visitor_counter SET total = total + 1 WHERE id = 1 RETURNING total',
+  ).first<{ total: number }>();
+  return row?.total ?? 0;
+}
+
 export async function metaGet(db: D1Database, key: string): Promise<string | null> {
   const row = await db.prepare('SELECT value FROM meta WHERE key = ?').bind(key).first<{ value: string }>();
   return row?.value ?? null;
