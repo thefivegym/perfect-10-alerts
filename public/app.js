@@ -145,13 +145,6 @@ import { deniedHelp, SETUP_KINDS, setupKind, setupTitle } from './setup.js';
   if (!club || !seasonSelect) return;
 
   function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
-  function badge(label, n, hot) {
-    const el = document.createElement('span');
-    el.className = 'badge' + (n ? '' : ' zero');
-    el.textContent = `${label} ${n}`;
-    if (hot) el.style.borderColor = 'currentColor';
-    return el;
-  }
 
   function renderClub(data) {
     sample.hidden = !data.sample;
@@ -178,24 +171,13 @@ import { deniedHelp, SETUP_KINDS, setupKind, setupTitle } from './setup.js';
     for (const row of data.leaderboard || []) {
       const li = document.createElement('li');
       if (row.hot) li.className = 'hot';
-      const rank = document.createElement('p');
-      rank.className = 'rank';
-      rank.textContent = String(row.rank);
-      const who = document.createElement('p');
-      who.className = 'who';
-      who.append(document.createTextNode(row.athlete));
-      const team = document.createElement('span');
-      team.textContent = `${row.team} · ${row.count}`;
-      who.appendChild(team);
-      const badges = document.createElement('p');
-      badges.className = 'badges';
-      badges.append(
-        badge('VT', row.events.vault),
-        badge('UB', row.events.bars),
-        badge('BB', row.events.beam),
-        badge('FX', row.events.floor),
-      );
-      li.append(rank, who, badges);
+      const name = document.createElement('span');
+      name.className = 'board-name';
+      name.textContent = row.athlete;
+      const total = document.createElement('span');
+      total.className = 'board-count';
+      total.textContent = String(row.count);
+      li.append(name, total);
       board.appendChild(li);
     }
     for (const entry of data.entries || []) {

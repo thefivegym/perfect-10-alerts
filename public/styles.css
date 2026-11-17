@@ -270,17 +270,32 @@ button.texty, a.texty {
 .season select { display: block; margin-top: 4px; min-height: 44px; font-size: 16px; font-weight: 560; padding: 8px 10px; background: #fffdf8; color: var(--ink); border: 1px solid var(--line); }
 .sample-flag { margin: 12px 0 0; padding: 8px 10px; background: #f8e7b0; font-weight: 560; }
 .sample-flag[hidden] { display: none; }
-.board, .log { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
-.board li, .log li { background: var(--card); border: 1px solid var(--line); padding: 12px; }
-.board li { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: center; }
-.rank { font-family: "Fraunces", Georgia, serif; font-size: 28px; font-weight: 600; line-height: 1; }
-.who { font-weight: 560; font-size: clamp(17px, 4.4vw, 20px); }
-.who span { display: block; font-weight: 400; color: var(--quiet); font-size: 15px; }
-.badges { grid-column: 1 / -1; }
-.badge { display: inline-block; margin: 0 4px 0 0; padding: 2px 6px; border: 1px solid currentColor; font-size: 13px; font-weight: 560; letter-spacing: 0.04em; }
-.badge.zero { opacity: 0.35; }
-.board li.hot { background: var(--ink); color: #fffdf8; }
-.board li.hot .who span { color: #e7d7b0; }
+.club-body { display: grid; gap: 16px; margin-top: 16px; }
+.board-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  padding: 10px 12px 8px;
+}
+.board-card h3 { margin: 0 0 6px; }
+.board, .log { list-style: none; padding: 0; margin: 0; }
+.log { display: grid; gap: 8px; }
+.log li { background: var(--card); border: 1px solid var(--line); padding: 12px; }
+.board li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 16px;
+  font-weight: 560;
+  line-height: 1.2;
+}
+.board li:last-child { border-bottom: 0; }
+.board-name { min-width: 0; }
+.board-count { font-family: "Fraunces", Georgia, serif; font-size: 18px; font-weight: 600; line-height: 1; }
+.board li.hot .board-count { color: var(--magenta); }
 .shout { margin: 0; font-family: "Fraunces", Georgia, serif; font-size: clamp(20px, 5vw, 26px); font-weight: 600; line-height: 1.15; }
 .meta { margin: 6px 0 0; color: var(--quiet); font-size: 15px; }
 .links { margin: 8px 0 0; font-size: 16px; font-weight: 560; }
@@ -357,4 +372,9 @@ button.texty, a.texty {
   .card { padding: 28px; }
   .lede { max-width: 16ch; }
   .below { max-width: 62ch; }
+  .club-body {
+    grid-template-columns: 240px minmax(0, 1fr);
+    align-items: start;
+    gap: 28px;
+  }
 }
