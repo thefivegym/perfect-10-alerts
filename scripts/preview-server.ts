@@ -1,7 +1,8 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
-import { buildClub, type ClubSource } from '../src/club.ts';
+import { buildClub, clubSeasons, type ClubSource } from '../src/club.ts';
+import type { AlertDraft } from '../src/types.ts';
 import { samplePushPage } from '../src/pages.ts';
 
 const root = join(import.meta.dirname, '..', 'public');
@@ -20,15 +21,32 @@ const types: Record<string, string> = {
 const server = createServer(async (req, res) => {
   const url = new URL(req.url || '/', origin);
   if (url.pathname === '/api/club') {
-    const season = Number(url.searchParams.get('season')) || 2026;
-    const entries: ClubSource[] = [
-      { id: 'sample-1', athlete: 'Jamie Sample', team: 'Sample State', event: 'vault', meet: 'Sample Invitational', date: '2026-02-14', detectedAt: '2026-02-14T20:00:00.000Z', meetUrl: 'https://thefivegym.github.io/live-scoreboard/?date=2026-02-14#meet=sample', clipUrl: 'https://example.com/sample-clip' },
-      { id: 'sample-2', athlete: 'Jamie Sample', team: 'Sample State', event: 'floor', meet: 'Sample Finals', date: '2026-04-01', detectedAt: '2026-04-01T20:00:00.000Z', meetUrl: 'https://thefivegym.github.io/live-scoreboard/?date=2026-04-01#meet=sample', clipUrl: null },
-      { id: 'sample-3', athlete: 'Riley Sample', team: 'Example U', event: 'beam', meet: 'Sample Finals', date: '2026-03-20', detectedAt: '2026-03-20T20:00:00.000Z', meetUrl: 'https://thefivegym.github.io/live-scoreboard/?date=2026-03-20#meet=sample', clipUrl: null },
-    ];
+    const requested = Number(url.searchParams.get('season'));
+    const season = Number.isInteger(requested) && requested >= 1990 && requested <= 2100 ? requested : 2026;
+    let entries: ClubSource[] = [];
+    let sample = true;
+    try {
+      const raw = JSON.parse(await readFile(join(root, '../data/club-2026.json'), 'utf8')) as { entries?: AlertDraft[] };
+      entries = (raw.entries || []).map((alert) => ({
+        id: alert.id,
+        athlete: alert.athleteName,
+        team: alert.team,
+        event: alert.event,
+        meet: alert.meetName,
+        date: alert.meetDate,
+        detectedAt: `${alert.meetDate}T12:00:00.000Z`,
+        meetUrl: alert.scoreboardUrl,
+        clipUrl: alert.clipUrl,
+      }));
+      sample = false;
+    } catch {
+      entries = [
+        { id: 'sample-1', athlete: 'Jamie Sample', team: 'Sample State', event: 'vault', meet: 'Sample Invitational', date: '2026-02-14', detectedAt: '2026-02-14T20:00:00.000Z', meetUrl: 'https://thefivegym.github.io/live-scoreboard/?date=2026-02-14#meet=sample', clipUrl: null },
+      ];
+    }
     const view = buildClub(entries, season);
     res.writeHead(200, { 'content-type': 'application/json' });
-    res.end(JSON.stringify({ ...view, seasons: [2026], sample: true }));
+    res.end(JSON.stringify({ ...view, seasons: clubSeasons(entries.map((entry) => entry.date), season), sample }));
     return;
   }
   if (url.pathname === '/api/config') {

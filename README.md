@@ -42,7 +42,7 @@ Every 10 that would send an alert is also written to a public log: athlete, team
 
 The same log builds the season leaderboard. Athletes are ranked by how many perfect 10s they have. People with the same count share a rank (so two leaders are 1 and 1, and the next person is 3). Within a tie, the gymnast with the more recent 10 is listed first. Each row shows team, count, and VT / UB / BB / FX badges. Anyone with two or more 10s is highlighted. Team totals sit under the board.
 
-`GET /api/club` returns that JSON and nothing about subscribers. `?season=2026` picks a season. With no query it uses the current season (July through the following June, same rule as the schedule).
+`GET /api/club` returns that JSON and nothing about subscribers. `?season=2026` picks a season. With no query it uses the current season (July through the following June, same rule as the schedule). The menu always includes 2026, because that season is seeded, plus any other season that has a visible row.
 
 Hide or correct a row (admin token):
 
@@ -55,7 +55,7 @@ curl -X POST "$PUBLIC_BASE_URL/api/admin/club" \
 
 You can also send `athlete`, `team`, `event`, `meet`, `date`, or `clip_url`.
 
-A normal replay does not write the log. To backfill past meets without notifying anyone:
+A normal replay does not write the log. To backfill one meet without notifying anyone:
 
 ```sh
 curl -X POST "$PUBLIC_BASE_URL/api/admin/club/backfill" \
@@ -65,6 +65,19 @@ curl -X POST "$PUBLIC_BASE_URL/api/admin/club/backfill" \
 ```
 
 `keys` accepts up to eight session keys. `from` and `to` (`YYYY-MM-DD`) use Virtius meets already saved in the schedule. `"log": true` on `/api/admin/replay` does the same for one meet. `"record": true` still saves the 10s and also sends the push.
+
+A full season is the same endpoint, and it still sends nothing:
+
+```sh
+curl -X POST "$PUBLIC_BASE_URL/api/admin/club/backfill" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"season":2026}'
+```
+
+Call it again until `"done": true`. Each call reads a few Virtius sessions, or one Road to Nationals meet when the session has no Virtius key. Road to Nationals is never asked sooner than 30 seconds after the previous request. `"waiting": true` means wait `retryAfterMs` and call again. Exhibition routines are skipped.
+
+The 2026 rows are already in `migrations/0003_club_2026.sql`. Applying migrations loads that season into the club. You do not need to crawl it again unless you pass `"reset": true`.
 
 If this site is already deployed, apply the new table change on top of the existing database:
 
@@ -163,7 +176,7 @@ If you forget, the Worker remembers the address from the first visit and uses th
 
 ### 8. Send yourself a test alert
 
-On a computer, open the site and allow notifications. On iPhone, use Safari: Share → Add to Home Screen, open Perfect 10 Alerts from the icon, then allow notifications. That saves this device. Then, from the project folder:
+On a computer, open the site and allow notifications. On iPhone, follow How to set up on the page: Safari, Share, Add to Home Screen, open the icon, then allow notifications. That saves this device. Then, from the project folder:
 
 ```sh
 curl -X POST "$PUBLIC_BASE_URL/api/admin/test-alert" \
@@ -199,7 +212,7 @@ You should see `"count": 1` and Kailin Chio on vault.
 
 ## Day to day
 
-Fans open the site and allow notifications. On iPhone that only works in the installed Home Screen app, on iOS 16.4 or newer. The signup page says so.
+Fans open the site and allow notifications. On iPhone that only works from the Home Screen icon, in Safari, on iOS 16.4 or newer. How to set up on the signup page walks through Share, Add to Home Screen, and what to do in Chrome or if notifications were blocked. Android and desktop have their own steps.
 
 - Every push has an Unsubscribe action. Tapping the notification itself opens a page with the meet, the stream or clip when we have one, an X search for the gymnast's name plus "10", and an unsubscribe button.
 - The manage link shown after signup can turn push off, turn it back on for this device, or remove the signup. There is no password. The link is the login. Don't post it publicly.
@@ -274,7 +287,7 @@ npm run replay    # print 10s from a Virtius key (default: the 2026 final)
 ## Troubleshooting
 
 - **The signup button says push is not turned on.** The VAPID secrets are missing. Run the three `wrangler secret put` commands and deploy again.
-- **Nothing happens on iPhone.** Safari in the browser cannot subscribe. Share → Add to Home Screen, open the icon, then allow notifications. iOS 16.4 or newer.
+- **Nothing happens on iPhone.** Safari in the browser cannot subscribe. Open How to set up: Share, Add to Home Screen, open the icon, then allow notifications. iOS 16.4 or newer. If the prompt was missed, Settings, Notifications, Perfect 10 Alerts, Allow Notifications. Chrome on iPhone has to be opened in Safari first.
 - **Test alert returns 401.** The `Authorization: Bearer` value does not match `ADMIN_TOKEN`.
 - **Replay returns a network error.** Virtius was briefly unreachable. Run it again. `npm test` hits the same URL.
 - **`/manage` keeps redirecting.** The site must be this version: `/manage` is served directly, not by asking the asset host for `/manage.html` (that redirect loops).

@@ -1,3 +1,5 @@
+import { deniedHelp, SETUP_KINDS, setupKind, setupTitle } from './setup.js';
+
 (() => {
   const form = document.querySelector('#signup');
   if (!form) return;
@@ -21,22 +23,61 @@
     return out;
   }
 
-  const iphone = /iPhone|iPad|iPod/.test(navigator.userAgent);
-  const standalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
-  if (iphone) document.querySelector('#iphone').classList.add('here');
+  const forced = new URLSearchParams(location.search).get('setup');
+  const kind = SETUP_KINDS.includes(forced) ? forced : setupKind({
+    ua: navigator.userAgent,
+    platform: navigator.platform,
+    maxTouchPoints: navigator.maxTouchPoints || 0,
+    standalone: window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches,
+  });
+  const setup = document.querySelector('#setup');
+  const denied = document.querySelector('#denied');
+  const title = document.querySelector('#setup-title');
+  if (title) title.textContent = setupTitle(kind);
+  for (const guide of document.querySelectorAll('.guide')) {
+    guide.hidden = guide.dataset.setup !== kind;
+  }
+  if (forced && setup) setup.open = true;
+
+  function showDenied() {
+    if (!denied) return;
+    denied.hidden = false;
+    denied.textContent = deniedHelp(kind);
+    if (setup) setup.open = true;
+  }
+  if (typeof Notification !== 'undefined' && Notification.permission === 'denied') showDenied();
+
+  document.querySelector('#copy-link')?.addEventListener('click', async () => {
+    const button = document.querySelector('#copy-link');
+    const link = `${location.origin}${location.pathname}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      if (button) button.textContent = 'Link copied';
+    } catch {
+      if (button) button.textContent = link;
+    }
+  });
 
   async function enablePush() {
     if (!config.vapidPublicKey) throw new Error('Push is not configured on this site yet.');
-    if (iphone && !standalone) {
-      throw new Error('On iPhone, add this site to your Home Screen first, open it from the icon, then tap Turn on alerts.');
+    if (kind === 'ios-other') {
+      if (setup) setup.open = true;
+      throw new Error('Open this page in Safari, add it to your Home Screen, then turn alerts on from the icon.');
     }
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    if (kind === 'ios-safari') {
+      if (setup) setup.open = true;
+      throw new Error('Add this site to your Home Screen, open the icon, then tap Turn on alerts.');
+    }
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || typeof Notification === 'undefined') {
       throw new Error('This browser cannot receive push notifications.');
     }
     const registration = await navigator.serviceWorker.register('/sw.js');
     await navigator.serviceWorker.ready;
     const permission = await Notification.requestPermission();
-    if (permission !== 'granted') throw new Error('Notifications are blocked.');
+    if (permission !== 'granted') {
+      if (permission === 'denied') showDenied();
+      throw new Error(permission === 'denied' ? 'Notifications are off for this site.' : 'Tap Allow when the browser asks.');
+    }
     const existing = await registration.pushManager.getSubscription();
     const subscription = existing || await registration.pushManager.subscribe({
       userVisibleOnly: true,

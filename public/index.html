@@ -30,11 +30,64 @@
 <p class="hint" id="setup-hint"></p>
 <form id="signup">
 <p class="honeypot" aria-hidden="true"><label>Company<input name="company" tabindex="-1" autocomplete="off"></label></p>
-<p class="iphone" id="iphone"><strong>iPhone.</strong> iOS 16.4 or newer. In Safari tap Share, then Add to Home Screen. Open the icon, tap Turn on alerts, and allow notifications.</p>
 <div id="turnstile" class="turnstile" hidden></div>
 <button class="btn btn-primary" type="submit" id="submit">Turn on alerts</button>
 <p class="status" id="status" role="status"></p>
 </form>
+<p class="denied" id="denied" hidden></p>
+<details class="setup" id="setup">
+<summary id="setup-title">How to set up</summary>
+<div class="guide" data-setup="ios-safari">
+<p class="guide-note">iOS 16.4 or newer, in Safari. Chrome and in-app browsers cannot add the icon.</p>
+<p class="share-demo">
+<span class="share-pill"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 15V3M8 7l4-4 4 4M6 10v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-8"/></svg>Share</span>
+<span>then Add to Home Screen</span>
+</p>
+<ol>
+<li>Tap the <span class="share-pill"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 15V3M8 7l4-4 4 4M6 10v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-8"/></svg>Share</span> button. On iPhone it is at the bottom of Safari. On iPad it is in the toolbar.</li>
+<li>Tap <strong>Add to Home Screen</strong>.</li>
+<li>Tap <strong>Add</strong>.</li>
+<li>Open the new <strong>Perfect 10 Alerts</strong> icon.</li>
+<li>Tap <strong>Turn on alerts</strong>.</li>
+<li>Tap <strong>Allow</strong>.</li>
+</ol>
+<p class="guide-note">Missed Allow? Open the Home Screen icon, then Settings, Notifications, Perfect 10 Alerts, and turn Allow Notifications on.</p>
+</div>
+<div class="guide" data-setup="ios-home" hidden>
+<p class="guide-note">You opened this from the Home Screen icon. That is the right place. iOS 16.4 or newer.</p>
+<ol>
+<li>Tap <strong>Turn on alerts</strong>.</li>
+<li>Tap <strong>Allow</strong>.</li>
+</ol>
+<p class="guide-note">Missed Allow? Stay in this icon, then open Settings, Notifications, Perfect 10 Alerts, and turn Allow Notifications on. Come back and tap Turn on alerts again.</p>
+</div>
+<div class="guide" data-setup="ios-other" hidden>
+<p class="guide-note">This browser cannot turn on iPhone alerts. Safari can. iOS 16.4 or newer.</p>
+<ol>
+<li>Tap <strong>Copy link</strong>.</li>
+<li>Open <strong>Safari</strong> and paste the link.</li>
+<li>Tap <span class="share-pill"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 15V3M8 7l4-4 4 4M6 10v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-8"/></svg>Share</span>, then <strong>Add to Home Screen</strong>, then <strong>Add</strong>.</li>
+<li>Open the new icon, tap <strong>Turn on alerts</strong>, then <strong>Allow</strong>.</li>
+</ol>
+<button class="btn btn-ghost" type="button" id="copy-link">Copy link</button>
+<p class="guide-note">Chrome, Instagram, X, and other in-app browsers cannot add the Home Screen icon.</p>
+</div>
+<div class="guide" data-setup="android" hidden>
+<ol>
+<li>Tap <strong>Turn on alerts</strong>.</li>
+<li>Tap <strong>Allow</strong>.</li>
+</ol>
+<p class="guide-note">Optional: open the Chrome menu and tap Add to Home screen, then open that icon.</p>
+<p class="guide-note">Blocked them? Tap the lock icon in the address bar, then Permissions, then Notifications, and choose Allow. You can also use Chrome Settings, Site settings, Notifications. Then tap Turn on alerts again.</p>
+</div>
+<div class="guide" data-setup="desktop" hidden>
+<ol>
+<li>Tap <strong>Turn on alerts</strong>.</li>
+<li>Click <strong>Allow</strong> on the browser prompt.</li>
+</ol>
+<p class="guide-note">Blocked them? Click the lock icon in the address bar, set Notifications to Allow, then tap Turn on alerts again.</p>
+</div>
+</details>
 </section>
 </div>
 <section class="club" id="club" aria-live="polite">
@@ -60,6 +113,6 @@
 <p class="samples"><a href="/sample/push">Sample alert</a> · <a href="https://thefivegym.github.io/live-scoreboard/">Live scoreboard</a></p>
 </section>
 </main>
-<script src="/app.js"></script>
+<script type="module" src="/app.js"></script>
 </body>
 </html>

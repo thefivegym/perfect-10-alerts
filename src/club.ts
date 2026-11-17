@@ -56,6 +56,17 @@ export function currentSeason(now = new Date()): number {
   return seasonFor(ymdInTz(now));
 }
 
+/** Seasons the public log can show. 2026 is seeded; later seasons come from new rows. */
+export const SEEDED_SEASONS = [2026];
+
+export function clubSeasons(dates: string[], selected: number, now = new Date()): number[] {
+  const years = new Set<number>([selected, currentSeason(now), ...SEEDED_SEASONS]);
+  for (const date of dates) {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) years.add(seasonFor(date));
+  }
+  return [...years].sort((a, b) => b - a);
+}
+
 /** Season 2026 is 1 Jul 2025 through 30 Jun 2026. */
 export function inSeason(date: string, season: number): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(date) && seasonFor(date) === season;

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
-import { buildClub, clubWriteMode, rankLeaders, shoutout, type ClubSource } from '../src/club.ts';
+import { buildClub, clubSeasons, clubWriteMode, rankLeaders, shoutout, type ClubSource } from '../src/club.ts';
 import { alertBinds, INSERT_ALERT_SQL } from '../src/db.ts';
 import type { AlertDraft } from '../src/types.ts';
 
@@ -15,6 +15,17 @@ function entry(partial: Partial<ClubSource> & Pick<ClubSource, 'id' | 'athlete' 
     ...partial,
   };
 }
+
+test('the season menu includes the seeded 2026 log and the current season', () => {
+  const seasons = clubSeasons(['2026-04-18'], 2026, new Date('2026-11-17T18:00:00.000Z'));
+  assert.deepEqual(seasons, [2027, 2026]);
+  const board = buildClub([
+    entry({ id: 'chio', athlete: 'Kailin Chio', team: 'LSU', event: 'vault', date: '2026-04-18' }),
+  ], 2026);
+  assert.equal(board.count, 1);
+  assert.equal(board.leaderboard[0]?.athlete, 'Kailin Chio');
+  assert.equal(board.leaderboard[0]?.events.vault, 1);
+});
 
 test('a shoutout names the gymnast, event, and team', () => {
   assert.equal(shoutout('Jamie Sample', 'vault', 'Sample State'), 'Congrats, Jamie Sample! Perfect 10 on vault for Sample State.');

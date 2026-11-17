@@ -1,5 +1,6 @@
 import { staticAssetUrl } from './assets.ts';
-import { buildClub, clubWriteMode, currentSeason } from './club.ts';
+import { advanceSeasonBackfill } from './backfill.ts';
+import { buildClub, clubSeasons, clubWriteMode, currentSeason } from './club.ts';
 import { USER_AGENT, VIRTIUS_SESSION, RTN_ORIGIN } from './config.ts';
 import { allowRate, clearPush, countMeets, findAlert, findAlertByParts, findSubscriberByPush, insertAlert, listAlerts, listDeliverableSubscribers, listVisibleClub, meetsOnDates, metaGet, metaSet, saveSubscriber, setClip, updateClubEntry } from './db.ts';
 import { deliverPending, publicOrigin, wantsPush } from './deliver.ts';
@@ -11,7 +12,6 @@ import { findSubscriberByUnsub, parsePush, removeByToken, subscribe } from './su
 import type { AlertDraft, MeetContext } from './types.ts';
 import type { EventKey } from './types.ts';
 import { addDays } from './time.ts';
-import { seasonFor } from './time.ts';
 import { asObj, html, httpsUrl, json, safeEqual, sha256Hex, str } from './util.ts';
 
 async function rememberOrigin(env: Env, request: Request): Promise<void> {
@@ -96,7 +96,7 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
     const requested = Number(url.searchParams.get('season'));
     const season = Number.isInteger(requested) && requested >= 1990 && requested <= 2100 ? requested : currentSeason();
     const visible = await listVisibleClub(env.DB);
-    const seasons = [...new Set(visible.map((entry) => seasonFor(entry.date)).concat(season))].sort((a, b) => b - a);
+    const seasons = clubSeasons(visible.map((entry) => entry.date), season);
     return json({ ...buildClub(visible, season), seasons, sample: false });
   }
 
@@ -409,6 +409,12 @@ async function correctClub(env: Env, body: Record<string, unknown>): Promise<Res
 }
 
 async function backfillClub(env: Env, body: Record<string, unknown>): Promise<Response> {
+  const season = Number(body.season);
+  if (Number.isInteger(season) && season >= 1990 && season <= 2100) {
+    const step = await advanceSeasonBackfill(env, season, body.reset === true);
+    const status = step.ok ? (step.waiting ? 429 : 200) : 502;
+    return json(step, status);
+  }
   const keys: string[] = [];
   if (str(body.virtius)) keys.push(str(body.virtius));
   if (Array.isArray(body.keys)) {
